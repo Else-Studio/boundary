@@ -6,6 +6,14 @@ import 'package:rxdart/rxdart.dart';
 import 'router.dart';
 import 'utils.dart';
 
+/// A route controller that stays alive when its route type returns with
+/// different params.
+abstract interface class RouteAware<R extends ConfigurationBase> {
+  /// Called instead of recreating the controller. Not called for an equal
+  /// route, and never together with enter for the same change.
+  void update(R route);
+}
+
 /// An abstract base class for controllers managing state via actions.
 ///
 /// It handles dispatching actions of type [A] from the View and processing them.

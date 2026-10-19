@@ -48,6 +48,20 @@ RouteBinding<R, _NoopController> _bind<R extends ConfigurationBase>(
       page: const SizedBox(),
     );
 
+class _NoteModalRoute extends ConfigurationBase {
+  static const String path = '/notes/:id';
+
+  const _NoteModalRoute(this.id) : super(isModal: true);
+
+  final int id;
+
+  @override
+  String get pathTemplate => path;
+
+  @override
+  Map<String, String> get params => {'id': '$id'};
+}
+
 final _caseBinding = _bind<_CaseRoute>(
   _CaseRoute.path,
   (p) => _CaseRoute(int.parse(p['id']!)),
@@ -153,6 +167,48 @@ void main() {
       final route = await consumeStored('/cases/abc');
 
       expect(route, const NotFoundRoute('/cases/abc'));
+    });
+  });
+
+  group('resolved routes', () {
+    late NavigationService service;
+
+    setUp(() {
+      service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: _routes(),
+      );
+    });
+
+    tearDown(() => service.dispose());
+
+    test('streams what it is told, once per change', () async {
+      final bases = <ConfigurationBase?>[];
+      final modals = <ConfigurationBase?>[];
+      service.baseRouteStream.listen(bases.add);
+      service.modalRouteStream.listen(modals.add);
+
+      service.onRouteResolved(base: const _CaseRoute(7), modal: null);
+      service.onRouteResolved(
+          base: const _CaseRoute(7), modal: const _NoteModalRoute(1));
+      service.onRouteResolved(base: const _CaseRoute(7), modal: null);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bases, [null, const _CaseRoute(7)]);
+      expect(modals, [null, const _NoteModalRoute(1), null]);
+    });
+
+    test('dispose closes both streams', () async {
+      service.dispose();
+
+      await expectLater(
+        service.baseRouteStream,
+        emitsInOrder([anything, emitsDone]),
+      );
+      await expectLater(
+        service.modalRouteStream,
+        emitsInOrder([anything, emitsDone]),
+      );
     });
   });
 }

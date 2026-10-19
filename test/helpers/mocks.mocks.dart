@@ -352,6 +352,43 @@ class MockNavigationService extends _i1.Mock implements _i9.NavigationService {
       ) as _i2.ValueStream<_i5.ConfigurationBase?>);
 
   @override
+  _i2.ValueStream<_i5.ConfigurationBase?> get baseRouteStream =>
+      (super.noSuchMethod(
+        Invocation.getter(#baseRouteStream),
+        returnValue: _FakeValueStream_0<_i5.ConfigurationBase?>(
+          this,
+          Invocation.getter(#baseRouteStream),
+        ),
+      ) as _i2.ValueStream<_i5.ConfigurationBase?>);
+
+  @override
+  _i2.ValueStream<_i5.ConfigurationBase?> get modalRouteStream =>
+      (super.noSuchMethod(
+        Invocation.getter(#modalRouteStream),
+        returnValue: _FakeValueStream_0<_i5.ConfigurationBase?>(
+          this,
+          Invocation.getter(#modalRouteStream),
+        ),
+      ) as _i2.ValueStream<_i5.ConfigurationBase?>);
+
+  @override
+  void onRouteResolved({
+    required _i5.ConfigurationBase? base,
+    required _i5.ConfigurationBase? modal,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #onRouteResolved,
+          [],
+          {
+            #base: base,
+            #modal: modal,
+          },
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i8.Future<void> setPostAuthRedirect(_i5.ConfigurationBase? configuration) =>
       (super.noSuchMethod(
         Invocation.method(

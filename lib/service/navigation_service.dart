@@ -25,6 +25,23 @@ class NavigationService {
   ConfigurationBase? get currentRequestedConfiguration =>
       _routeRequest$.valueOrNull;
 
+  /// The base route the app shows, after redirects. Starts at null.
+  ValueStream<ConfigurationBase?> get baseRouteStream =>
+      throw UnimplementedError('not implemented');
+
+  /// The modal route shown, or null. Starts at null.
+  ValueStream<ConfigurationBase?> get modalRouteStream =>
+      throw UnimplementedError('not implemented');
+
+  /// Called by AppCoordinator only, each time what it shows changes. Each
+  /// stream emits only when its value changed.
+  void onRouteResolved({
+    required ConfigurationBase? base,
+    required ConfigurationBase? modal,
+  }) {
+    throw UnimplementedError('not implemented');
+  }
+
   NavigationService({
     required NavigationServiceDelegate delegate,
     required RouteTable routes,
