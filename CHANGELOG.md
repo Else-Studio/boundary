@@ -31,6 +31,13 @@
 *   `RouteAware<R>` controllers get `update(route)` when their route type returns with different params and are kept; other controllers are recreated.
 *   `NavigationService.baseRouteStream` and `modalRouteStream` stream the resolved routes, after redirects.
 *   `NavigationService.onRouteResolved` is called by `AppCoordinator` each time what it shows changes.
+*   `RouteAccess` (`public`, `guestOnly`, `protected`) is new; `RouteBinding.access` sets it, and defaults to `protected`.
+*   `RouteBinding.transient` keeps a route out of the "last base" in `NavigationService`; `RouteTable.isTransient(route)` reads it (false for a route with no binding).
+*   `GuardResult` (`allow`, `redirect`), `RouteGuard` and `AppCoordinatorDelegate.createGuards(injector)` are new: guards run in order, the first redirect restarts resolution at the access step, more than 5 redirects show `error.navigation.redirectLoop` and a guard that throws shows `error.navigation.guardFailed`.
+*   The coordinator applies one access table: when signed out, a `public` route is now shown, as is a `guestOnly` route, and only `protected` routes go to login; a signed-in user on a `guestOnly` route goes to `getPostLoginDefaultRoute()`.
+*   `defaultErrorRouteBinding` and `defaultNotFoundRouteBinding` are `public`.
+*   Removed: `ConfigurationBase.isProtected` and `protected`, `NavigationServiceDelegate.isAuthCallbackRoute`, `AppCoordinatorDelegate.isPublicOnlyRoute`, `isLogoutRoute`, `getResetPasswordRoute` and `resolveAppSpecificAuthState`.
+*   Removed: `LoggedOut.emailForResetPassword` and the `resetPassword` parameter of `confirmLocalLogout()`.
 
 ## 0.4.1
 

@@ -137,7 +137,7 @@ class RouteTable {
 
   /// The binding's transient flag; false for a route type with no binding.
   bool isTransient(ConfigurationBase route) {
-    throw UnimplementedError('not implemented');
+    return _byType[route.runtimeType]?.transient ?? false;
   }
 
   /// The binding whose route type is route.runtimeType. Throws StateError

@@ -153,7 +153,9 @@ class NavigationService {
   /// This is used during deep-linking when the AppCoordinator scaffolds a background
   /// route that wasn't explicitly requested through the NavigationService.
   void syncBaseConfiguration(ConfigurationBase configuration) {
-    if (configuration.isModal || configuration is ErrorRoute || false) {
+    if (configuration.isModal ||
+        configuration is ErrorRoute ||
+        _routes.isTransient(configuration)) {
       return;
     }
     if (_lastBaseConfiguration != configuration) {
@@ -181,17 +183,16 @@ class NavigationService {
   }
 
   void _navigateToLastBaseOr(ConfigurationBase fallback) {
-    // Only navigate back to the previous base if it is known and not a
-    // callback. Callback routes can be deep-linked with an unauthorized
-    // session.
-    if (_lastBaseConfiguration != null && !false) {
+    // Only navigate back to the previous base if it is known. Transient
+    // routes are never kept as the last base.
+    if (_lastBaseConfiguration != null) {
       _logger.info(
         "Requesting navigation back to last base route: ${_lastBaseConfiguration!.runtimeType}",
       );
       _processRequest(_lastBaseConfiguration!);
     } else {
       _logger.warning(
-        "Cannot navigate back: last base configuration is unknown or was a callback. Requesting ${fallback.runtimeType} as fallback.",
+        "Cannot navigate back: last base configuration is unknown. Requesting ${fallback.runtimeType} as fallback.",
       );
       _processRequest(fallback);
     }
@@ -204,9 +205,9 @@ class NavigationService {
 
     bool isModalRoute = configuration.isModal;
     bool isErrorRoute = configuration is ErrorRoute;
-    bool isAuthCallbackRoute = false;
+    bool isTransientRoute = _routes.isTransient(configuration);
 
-    if (!isModalRoute && !isErrorRoute && !isAuthCallbackRoute) {
+    if (!isModalRoute && !isErrorRoute && !isTransientRoute) {
       if (_lastBaseConfiguration != configuration) {
         _logger.debug(
           "Updating last base route request to: ${configuration.runtimeType}",

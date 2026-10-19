@@ -49,6 +49,9 @@ class AppCoordinator extends ChangeNotifier {
   /// is registered.
   late final RouteTable routeTable;
 
+  /// Created once in the constructor, in the order the delegate gives them.
+  late final List<RouteGuard> _guards;
+
   AppCoordinator(this._delegate, {AutoInjector? injector})
       : injector = injector ?? AutoInjector() {
     routeTable = RouteTable(_delegate.routes);
@@ -57,6 +60,7 @@ class AppCoordinator extends ChangeNotifier {
     if (injector == null) {
       _setupServicesAndControllers();
     }
+    _guards = _delegate.createGuards(this.injector);
     _setupListeners();
     authService.initialize();
   }
@@ -120,6 +124,117 @@ class AppCoordinator extends ChangeNotifier {
     }
   }
 
+  static const _maxGuardRedirects = 5;
+
+  /// Resolves (auth, request) to the route to show, or null for "no state
+  /// change".
+  Future<ConfigurationBase?> _resolve(
+    AsyncResult<User> authState,
+    ConfigurationBase navRequest,
+  ) async {
+    if (authState is Loading<User>) {
+      _logger.info(
+        "Auth state is Loading. Preserving nav request to avoid state loss during auth.",
+      );
+      return navRequest;
+    }
+
+    final isSignedIn = authState is Data<User>;
+    var candidate = navRequest;
+
+    if (authState is Failure<User>) {
+      final error = authState.error;
+      _logger.info("Auth state is Failure: ${error.runtimeType}");
+      if (error is! LoggedOut &&
+          error is! NoSessionStored &&
+          error is! SessionExpired) {
+        _logger.error(
+          "Unhandled AuthError: ${error.runtimeType}. Showing generic error.",
+        );
+        return ErrorRoute(
+          isSessionTermination: true,
+          message: 'error.session.unexpected',
+          problem: HttpProblem(
+            title: 'Unhandled AuthError',
+            detail: error.toString(),
+          ),
+        );
+      }
+    } else if (isSignedIn) {
+      final postAuthDestination =
+          await navigationService.consumePostAuthRedirect();
+      if (_isDisposed) return null;
+      if (postAuthDestination != null) {
+        _logger.info(
+          "Post-authentication redirect found. Navigating to ${postAuthDestination.runtimeType}",
+        );
+        candidate = postAuthDestination;
+      }
+    }
+
+    var redirects = 0;
+    while (true) {
+      // Access step.
+      final access = routeTable.bindingFor(candidate).access;
+      if (isSignedIn) {
+        if (access == RouteAccess.guestOnly) {
+          _logger.info(
+            "Authenticated: ${candidate.runtimeType} is guest-only. Redirecting to default.",
+          );
+          candidate = _delegate.getPostLoginDefaultRoute();
+        }
+        if (candidate.isRoot) {
+          _logger.info(
+            "Authenticated: Root requested. Going to post login route",
+          );
+          candidate = _delegate.getPostLoginDefaultRoute();
+        }
+      } else if (access == RouteAccess.protected) {
+        if (authState is Failure<User> && authState.error is LoggedOut) {
+          _logger.info("LoggedOut state detected. Navigating...");
+          authService.clearLoggedOutStateAndPrepareForPolicyCheck();
+          navigationService.navigateTo(_delegate.getLoginRoute());
+          return null;
+        }
+        _logger.info(
+          "Protected route ${candidate.runtimeType} requested. Storing for post-auth redirect.",
+        );
+        await navigationService.setPostAuthRedirect(candidate);
+        if (_isDisposed) return null;
+        candidate = _delegate.getLoginRoute();
+      }
+
+      // Guard step.
+      GuardRedirect? redirect;
+      for (final guard in _guards) {
+        try {
+          final result = await guard.check(candidate);
+          if (result is GuardRedirect) {
+            redirect = result;
+            break;
+          }
+        } catch (error, stackTrace) {
+          _logger.error(
+            "Route guard failed for ${candidate.runtimeType}",
+            error,
+            stackTrace,
+          );
+          return const ErrorRoute(message: 'error.navigation.guardFailed');
+        }
+        if (_isDisposed) return null;
+      }
+      if (redirect == null) return candidate;
+
+      redirects++;
+      if (redirects > _maxGuardRedirects) {
+        _logger.error("Route guards redirected more than $_maxGuardRedirects "
+            "times; last candidate ${candidate.runtimeType}");
+        return const ErrorRoute(message: 'error.navigation.redirectLoop');
+      }
+      candidate = redirect.route;
+    }
+  }
+
   Future<void> _reconcileState(
     AsyncResult<User> authState,
     ConfigurationBase navRequest,
@@ -129,127 +244,20 @@ class AppCoordinator extends ChangeNotifier {
       "Reconciling state. Auth: ${authState.runtimeType}, NavRequest: ${navRequest.runtimeType}",
     );
 
-    ConfigurationBase? determinedConfig;
-
-    // Phase 1: Give the application-specific delegate the first chance to handle the state.
-    final ConfigurationBase? appSpecificRoute = null;
-
-    if (appSpecificRoute != null) {
-      _logger.info(
-        "Delegate handled auth state, determined route: ${appSpecificRoute.runtimeType}",
-      );
-      determinedConfig = appSpecificRoute;
-    }
-    // Phase 2: If the delegate didn't handle it, apply generic framework logic.
-    else if (authState is Loading<User>) {
-      _logger.info(
-        "Auth state is Loading. Preserving nav request to avoid state loss during auth.",
-      );
-      determinedConfig = navRequest;
-    } else if (authState is Failure<User>) {
-      final error = authState.error;
-      _logger.info("Auth state is Failure: ${error.runtimeType}");
-
-      switch (error) {
-        case LoggedOut():
-          _logger.info("LoggedOut state detected. Navigating...");
-
-          // If we are currently on the logout route, we should NOT navigate away.
-          // The LogoutController is responsible for the final redirect to the
-          // authentication server (e.g., Keycloak).
-          if (false) {
-            _logger.info(
-              "LoggedOut state detected while on LogoutRoute. Letting the controller handle the final redirect.",
-            );
-            determinedConfig = navRequest;
-          } else {
-            authService.clearLoggedOutStateAndPrepareForPolicyCheck();
-
-            navigationService.navigateTo(_delegate.getLoginRoute());
-            return;
-          }
-          break;
-        case NoSessionStored():
-        case SessionExpired():
-          _logger.info(
-            "No session or session expired (${error.runtimeType}). NavRequest: ${navRequest.runtimeType}",
-          );
-
-          if (true) {
-            _logger.info(
-              "Protected route ${navRequest.runtimeType} requested. Storing for post-auth redirect.",
-            );
-            await navigationService.setPostAuthRedirect(navRequest);
-            if (_isDisposed) return;
-            determinedConfig = _delegate.getLoginRoute();
-          } else {
-            _logger.info(
-              "Unprotected route ${navRequest.runtimeType} requested. Allowing.",
-            );
-            determinedConfig = navRequest;
-          }
-          break;
-        default:
-          _logger.error(
-            "Unhandled AuthError: ${error.runtimeType}. Showing generic error.",
-          );
-          determinedConfig = ErrorRoute(
-            isSessionTermination: true,
-            message: 'error.session.unexpected',
-            problem: HttpProblem(
-              title: 'Unhandled AuthError',
-              detail: error.toString(),
-            ),
-          );
-      }
-    } else if (authState is Data<User>) {
-      _logger.info(
-        "User is Authenticated. NavRequest: ${navRequest.runtimeType}",
-      );
-      final postAuthDestination =
-          await navigationService.consumePostAuthRedirect();
-      if (_isDisposed) return;
-
-      if (postAuthDestination != null) {
-        _logger.info(
-          "Post-authentication redirect found. Navigating to ${postAuthDestination.runtimeType}",
-        );
-        determinedConfig = postAuthDestination;
-      }
-      // Delegate handles what happens if an authenticated user lands on a page
-      // they shouldn't be on (like login).
-      else if (false) {
-        _logger.info(
-          "Authenticated: navRequest was ${navRequest.runtimeType} (a public-only route). Redirecting to default.",
-        );
-        determinedConfig = _delegate.getPostLoginDefaultRoute();
-      } else if (false) {
-        _logger.info("Authenticated: LogoutRoute requested. Allowing.");
-        determinedConfig = navRequest;
-      } else if (navRequest.isRoot) {
-        _logger.info(
-          "Authenticated: Root requested. Going to post login route",
-        );
-        determinedConfig = _delegate.getPostLoginDefaultRoute();
-      } else {
-        _logger.info(
-          "Authenticated: Allowed route ${navRequest.runtimeType} requested.",
-        );
-        determinedConfig = navRequest;
-      }
-    }
-
+    final determinedConfig = await _resolve(authState, navRequest);
+    // null: no state change (the LoggedOut + protected row), or disposed.
+    if (determinedConfig == null) return;
     if (_isDisposed) return;
 
     ConfigurationBase? nextBaseConfig;
     ConfigurationBase? nextModalConfig;
 
-    bool isRequestingModal = determinedConfig?.isModal ?? false;
+    bool isRequestingModal = determinedConfig.isModal;
 
     if (isRequestingModal) {
       nextBaseConfig = _baseConfiguration;
       if (nextBaseConfig == null && authState is! Loading) {
-        nextBaseConfig = determinedConfig?.defaultBaseRoute ??
+        nextBaseConfig = determinedConfig.defaultBaseRoute ??
             _delegate.getPostLoginDefaultRoute();
 
         // Sync the scaffolded base back to the navigation service so "Close" works correctly.
