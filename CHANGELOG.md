@@ -45,6 +45,9 @@
 *   Removed: `AppCoordinatorDelegate.shouldDisposeController`; every replaced base controller is now disposed.
 *   Removed: `AppCoordinator.shellController`.
 *   Removed: the private `_longLivedControllerCache`; there is no keep-alive.
+*   `ConfigurationBase.parent` is new: where back goes from a route; null for a top route.
+*   `NavigationService.navigateUp()` dismisses a shown modal, or else goes to the shown base route's parent; it returns false and requests nothing when there is neither.
+*   `CoreRouterDelegate.popRoute()` (system back) pops a shown modal, or else calls `navigateUp()`; the app exits only when the route has no parent.
 
 ## 0.4.1
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
 
 import 'app_coordinator.dart';
@@ -242,6 +243,15 @@ class CoreRouterDelegate extends RouterDelegate<ConfigurationBase>
       '[RouterDelegate] setNewRoutePath called with: ${configuration.runtimeType}',
     );
     appCoordinator.navigationService.routerSetNewPath(configuration);
+  }
+
+  /// System back. A modal shown: pops it as the mixin does, and
+  /// `onDidRemovePage` dismisses it. Otherwise asks
+  /// [NavigationService.navigateUp]; false leaves the app (the platform decides).
+  @override
+  Future<bool> popRoute() {
+    if (appCoordinator.modalConfiguration != null) return super.popRoute();
+    return SynchronousFuture(appCoordinator.navigationService.navigateUp());
   }
 
   @override

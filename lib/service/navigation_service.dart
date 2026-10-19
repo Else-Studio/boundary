@@ -186,7 +186,15 @@ class NavigationService {
   /// shown base has a parent: navigateTo(parent), returns true. Otherwise
   /// returns false and requests nothing.
   bool navigateUp() {
-    throw UnimplementedError('not implemented');
+    if (_modalRoute$.value != null) {
+      dismissModal();
+      return true;
+    }
+    final parent = _baseRoute$.value?.parent;
+    if (parent == null) return false;
+    _logger.debug("Request received to navigate up to: ${parent.runtimeType}");
+    navigateTo(parent);
+    return true;
   }
 
   void _navigateToLastBaseOr(ConfigurationBase fallback) {
