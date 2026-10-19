@@ -893,6 +893,12 @@ class MockController<A> extends _i1.Mock implements _i5.Controller<A> {
   }
 
   @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
+        returnValue: false,
+      ) as bool);
+
+  @override
   void dispatch(A? action) => super.noSuchMethod(
         Invocation.method(
           #dispatch,
@@ -902,10 +908,55 @@ class MockController<A> extends _i1.Mock implements _i5.Controller<A> {
       );
 
   @override
-  void handleAction(A? action) => super.noSuchMethod(
+  _i11.FutureOr<void> handleAction(A? action) =>
+      (super.noSuchMethod(Invocation.method(
+        #handleAction,
+        [action],
+      )) as _i11.FutureOr<void>);
+
+  @override
+  void onError(
+    Object? error,
+    StackTrace? stackTrace,
+  ) =>
+      super.noSuchMethod(
         Invocation.method(
-          #handleAction,
-          [action],
+          #onError,
+          [
+            error,
+            stackTrace,
+          ],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  T own<T extends Object>(T? resource) => (super.noSuchMethod(
+        Invocation.method(
+          #own,
+          [resource],
+        ),
+        returnValue: _i14.dummyValue<T>(
+          this,
+          Invocation.method(
+            #own,
+            [resource],
+          ),
+        ),
+      ) as T);
+
+  @override
+  void emit<T>(
+    _i11.StreamController<T>? target,
+    T? value,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #emit,
+          [
+            target,
+            value,
+          ],
         ),
         returnValueForMissingStub: null,
       );
