@@ -28,6 +28,9 @@
 *   `NavigationService({required delegate, required routes})` parses the stored post-auth redirect with the `RouteTable`.
 *   `RouteTable` appends `defaultErrorRouteBinding` and `defaultNotFoundRouteBinding` for the `ErrorRoute` and `NotFoundRoute` an app does not bind; `DefaultPageController`, `DefaultErrorPage` and `DefaultNotFoundPage` are exported from `boundary.dart`.
 *   Removed: `NavigationServiceDelegate.parseUri`, `AppCoordinatorDelegate.createControllerForConfiguration` and `AppCoordinatorDelegate.mapControllerToWidget`.
+*   `RouteAware<R>` controllers get `update(route)` when their route type returns with different params and are kept; other controllers are recreated.
+*   `NavigationService.baseRouteStream` and `modalRouteStream` stream the resolved routes, after redirects.
+*   `NavigationService.onRouteResolved` is called by `AppCoordinator` each time what it shows changes.
 
 ## 0.4.1
 

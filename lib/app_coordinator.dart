@@ -1,5 +1,5 @@
 import 'package:auto_injector/auto_injector.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide RouteAware;
 import 'package:http/http.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -279,6 +279,8 @@ class AppCoordinator extends ChangeNotifier {
 
       Controller? oldBaseController = _baseController;
       Controller? oldModalController = _modalController;
+      final oldBaseConfig = _baseConfiguration;
+      final oldModalConfig = _modalConfiguration;
       bool baseConfigChanged = nextBaseConfig != _baseConfiguration;
       bool modalConfigChanged = nextModalConfig != _modalConfiguration;
 
@@ -286,25 +288,51 @@ class AppCoordinator extends ChangeNotifier {
       _modalConfiguration = nextModalConfig;
 
       if (baseConfigChanged) {
-        if (oldBaseController != null &&
-            _delegate.shouldDisposeController(oldBaseController)) {
-          _disposeControllerAfterRouteUpdate(oldBaseController);
+        if (!_updateInPlace(oldBaseController, oldBaseConfig, nextBaseConfig)) {
+          if (oldBaseController != null &&
+              _delegate.shouldDisposeController(oldBaseController)) {
+            _disposeControllerAfterRouteUpdate(oldBaseController);
+          }
+          _baseController = _baseConfiguration != null
+              ? _createController(_baseConfiguration!)
+              : null;
         }
-        _baseController = _baseConfiguration != null
-            ? _createController(_baseConfiguration!)
-            : null;
       }
 
       if (modalConfigChanged) {
-        if (oldModalController != null) {
-          _disposeControllerAfterRouteUpdate(oldModalController);
+        if (!_updateInPlace(
+            oldModalController, oldModalConfig, nextModalConfig)) {
+          if (oldModalController != null) {
+            _disposeControllerAfterRouteUpdate(oldModalController);
+          }
+          _modalController = _modalConfiguration != null
+              ? _createController(_modalConfiguration!)
+              : null;
         }
-        _modalController = _modalConfiguration != null
-            ? _createController(_modalConfiguration!)
-            : null;
       }
+      navigationService.onRouteResolved(
+        base: _baseConfiguration,
+        modal: _modalConfiguration,
+      );
       notifyListeners();
     }
+  }
+
+  /// Calls [RouteAware.update] when [controller] stays for a route of the
+  /// same type with other params. Returns whether it did.
+  bool _updateInPlace(
+    Controller? controller,
+    ConfigurationBase? current,
+    ConfigurationBase? next,
+  ) {
+    if (controller is! RouteAware ||
+        current == null ||
+        next == null ||
+        current.runtimeType != next.runtimeType) {
+      return false;
+    }
+    (controller as RouteAware).update(next);
+    return true;
   }
 
   Controller _createController(ConfigurationBase route) =>
@@ -350,9 +378,7 @@ class AppCoordinator extends ChangeNotifier {
               "Application state could not be determined (no base controller).",
         ),
       );
-      return routeTable
-          .bindingFor(route)
-          .buildView(_createController(route));
+      return routeTable.bindingFor(route).buildView(_createController(route));
     }
     return routeTable
         .bindingFor(_baseConfiguration!)

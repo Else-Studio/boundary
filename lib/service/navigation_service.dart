@@ -18,6 +18,8 @@ class NavigationService {
   static const int _redirectIntentLifetimeMinutes = 5;
 
   final _routeRequest$ = BehaviorSubject<ConfigurationBase?>();
+  final _baseRoute$ = BehaviorSubject<ConfigurationBase?>.seeded(null);
+  final _modalRoute$ = BehaviorSubject<ConfigurationBase?>.seeded(null);
   ConfigurationBase? _lastBaseConfiguration;
 
   ValueStream<ConfigurationBase?> get routeRequestStream =>
@@ -26,12 +28,10 @@ class NavigationService {
       _routeRequest$.valueOrNull;
 
   /// The base route the app shows, after redirects. Starts at null.
-  ValueStream<ConfigurationBase?> get baseRouteStream =>
-      throw UnimplementedError('not implemented');
+  ValueStream<ConfigurationBase?> get baseRouteStream => _baseRoute$.stream;
 
   /// The modal route shown, or null. Starts at null.
-  ValueStream<ConfigurationBase?> get modalRouteStream =>
-      throw UnimplementedError('not implemented');
+  ValueStream<ConfigurationBase?> get modalRouteStream => _modalRoute$.stream;
 
   /// Called by AppCoordinator only, each time what it shows changes. Each
   /// stream emits only when its value changed.
@@ -39,7 +39,8 @@ class NavigationService {
     required ConfigurationBase? base,
     required ConfigurationBase? modal,
   }) {
-    throw UnimplementedError('not implemented');
+    if (_baseRoute$.value != base) _baseRoute$.add(base);
+    if (_modalRoute$.value != modal) _modalRoute$.add(modal);
   }
 
   NavigationService({
@@ -223,5 +224,7 @@ class NavigationService {
   void dispose() {
     _logger.info('Disposing NavigationService.');
     _routeRequest$.close();
+    _baseRoute$.close();
+    _modalRoute$.close();
   }
 }
