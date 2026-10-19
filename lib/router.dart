@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_coordinator.dart';
 import 'model/error_models.dart';
+import 'route_table.dart';
 import 'utils.dart';
 
 // --- Part 1: Route Configuration (Core) ---
@@ -25,9 +26,19 @@ abstract class ConfigurationBase {
     this.isModal = false,
   });
 
-  /// Returns the [Uri] representation of this route configuration, including
-  /// path and any necessary query parameters or path segments.
-  Uri get uri;
+  /// The path template this route is bound under, e.g. '/cases/:id'.
+  /// Declare it once as `static const path` on the route, return it here,
+  /// and give the same constant to the route's binding.
+  String get pathTemplate;
+
+  /// Values by name. A name that matches a `:name` segment of
+  /// [pathTemplate] fills it; the others become query parameters, in map
+  /// order. Default: none.
+  Map<String, String> get params => const {};
+
+  /// Built by [buildRouteUri] from [pathTemplate] and [params]. May be overridden.
+  // Stub: the real implementation is `buildRouteUri(pathTemplate, params)`.
+  Uri get uri => Uri.parse(pathTemplate);
 
   /// Getter to access the protection status of the route.
   bool get protected => isProtected;
@@ -37,32 +48,25 @@ abstract class ConfigurationBase {
   ConfigurationBase? get defaultBaseRoute => null;
 }
 
-/// Signature for a function that creates a [ConfigurationBase] instance
-/// from a map of route parameters (path and query).
-typedef ConfigurationBuilder<T extends ConfigurationBase> = T Function(
-    Map<String, String> params);
-
 // --- Part 2: Core Routes ---
 
 /// A generic route for handling "404 Not Found" errors.
 /// This is a framework-level concept, not tied to application business logic.
 class NotFoundRoute extends ConfigurationBase {
-  static const String pathTemplate = '/404';
+  static const String path = '/404';
   final String originalUrl;
 
   /// Creates a NotFoundRoute. It is not protected.
   const NotFoundRoute(this.originalUrl) : super(isProtected: false);
 
-  static ConfigurationBase create(Map<String, String> params) =>
-      NotFoundRoute(params['originalUrl'] ?? '');
   @override
-  Uri get uri => Uri.parse(pathTemplate);
+  String get pathTemplate => path;
 }
 
 /// A generic route for displaying critical, often unrecoverable, errors.
 /// This is a framework-level concept for representing failure states.
 class ErrorRoute extends ConfigurationBase {
-  static const String pathTemplate = '/error';
+  static const String path = '/error';
   final String message;
   final HttpProblem? problem;
   final bool isSessionTermination;
@@ -74,13 +78,18 @@ class ErrorRoute extends ConfigurationBase {
     this.isSessionTermination = false,
   }) : super(isProtected: false);
 
-  static ConfigurationBase create(Map<String, String> params) => ErrorRoute(
-        message: params['message'] ?? '',
-        isSessionTermination: params['isSessionTermination'] == 'true',
-      );
+  @override
+  String get pathTemplate => path;
+
+  @override
+  Map<String, String> get params => {
+        'message': message,
+        'isSessionTermination': isSessionTermination.toString(),
+      };
+
   @override
   Uri get uri => Uri(
-        path: pathTemplate,
+        path: path,
         queryParameters: {
           'message': message,
           'isSessionTermination': isSessionTermination.toString(),
@@ -89,6 +98,13 @@ class ErrorRoute extends ConfigurationBase {
 }
 
 // --- Part 3: Route Utilities (Core) ---
+
+/// Fills each `:name` segment with Uri.encodeComponent(params[name]) and puts
+/// the remaining params in the query. No remaining params: no '?'.
+/// A `:name` with no value in params throws ArgumentError.
+Uri buildRouteUri(String pathTemplate, Map<String, String> params) {
+  throw UnimplementedError('not implemented');
+}
 
 /// Helper function to convert path templates (e.g., '/users/:id') into
 /// regular expressions for matching URL paths. Handles named groups for parameters.
@@ -106,42 +122,13 @@ RegExp pathToRegExp(String pathTemplate) {
 
 // --- Part 4: Information Parser (Core) ---
 
-/// A generic route information parser that uses an injected `routeMap` to
-/// convert a URL path into a [ConfigurationBase].
+/// A generic route information parser that uses a [RouteTable] to convert a
+/// URL into a [ConfigurationBase].
 class AppRouteInformationParser
     extends RouteInformationParser<ConfigurationBase> {
-  final Map<RegExp, ConfigurationBuilder> routeMap;
-  final ConfigurationBase defaultRoute;
+  final RouteTable routes;
 
-  AppRouteInformationParser({
-    required this.routeMap,
-    required this.defaultRoute,
-  });
-
-  static ConfigurationBase parseUri(
-      Uri uri, Map<RegExp, ConfigurationBuilder> routeMap) {
-    final path = uri.path;
-    final queryParameters = uri.queryParameters;
-
-    for (final entry in routeMap.entries) {
-      final regExp = entry.key;
-      final createRoute = entry.value;
-      final match = regExp.firstMatch(path);
-
-      if (match != null) {
-        final parameters = <String, String>{};
-        // Extract path parameters
-        for (final paramName in match.groupNames) {
-          parameters[paramName] = match.namedGroup(paramName)!;
-        }
-        // Combine with query parameters
-        parameters.addAll(queryParameters);
-        return createRoute(parameters);
-      }
-    }
-
-    return NotFoundRoute(uri.toString());
-  }
+  AppRouteInformationParser(this.routes);
 
   /// This is triggered by the OS (e.g., deep link, browser back/forth, URL changes).
   /// It matches the path against the application-provided `routeMap` to create
@@ -150,8 +137,7 @@ class AppRouteInformationParser
   Future<ConfigurationBase> parseRouteInformation(
     RouteInformation routeInformation,
   ) async {
-    final uri = routeInformation.uri;
-    return parseUri(uri, routeMap);
+    return routes.parse(routeInformation.uri);
   }
 
   /// This is triggered by the [RouterDelegate] to update the browser's URL bar.

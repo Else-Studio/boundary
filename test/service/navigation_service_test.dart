@@ -7,7 +7,7 @@ class _TestRoute extends ConfigurationBase {
   const _TestRoute(this.path);
 
   @override
-  Uri get uri => Uri.parse(path);
+  String get pathTemplate => path;
 }
 
 class _TestCallbackRoute extends _TestRoute {

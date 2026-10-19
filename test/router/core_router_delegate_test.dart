@@ -18,14 +18,14 @@ import '../helpers/sut_factory.dart';
 
 class FakeBaseRoute extends ConfigurationBase {
   @override
-  Uri get uri => Uri.parse('/base');
+  String get pathTemplate => '/base';
 }
 
 class FakeModalRoute extends ConfigurationBase {
   @override
   bool get isModal => true;
   @override
-  Uri get uri => Uri.parse('/modal');
+  String get pathTemplate => '/modal';
 }
 
 class PlainPageBuilder implements RouterPageBuilder {

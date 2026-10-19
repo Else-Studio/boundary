@@ -28,19 +28,19 @@ import '../helpers/sut_factory.dart';
 // Fakes for type-safe route comparison
 class FakeBaseRoute extends ConfigurationBase {
   @override
-  Uri get uri => Uri.parse('/base');
+  String get pathTemplate => '/base';
 }
 
 class FakeOtherBaseRoute extends ConfigurationBase {
   @override
-  Uri get uri => Uri.parse('/other-base');
+  String get pathTemplate => '/other-base';
 }
 
 class FakeModalRoute extends ConfigurationBase {
   @override
   bool get isModal => true;
   @override
-  Uri get uri => Uri.parse('/modal');
+  String get pathTemplate => '/modal';
 }
 
 void main() {

@@ -29,49 +29,49 @@ class FakeUnprotectedRoute extends ConfigurationBase {
   @override
   bool get protected => false;
   @override
-  Uri get uri => Uri.parse('/unprotected');
+  String get pathTemplate => '/unprotected';
 }
 
 class FakeProtectedRoute extends ConfigurationBase {
   @override
   bool get protected => true;
   @override
-  Uri get uri => Uri.parse('/protected');
+  String get pathTemplate => '/protected';
 }
 
 class FakeLoginRoute extends ConfigurationBase {
   @override
   bool get protected => false;
   @override
-  Uri get uri => Uri.parse('/login');
+  String get pathTemplate => '/login';
 }
 
 class FakeResetPasswordRoute extends ConfigurationBase {
   @override
   bool get protected => false;
   @override
-  Uri get uri => Uri.parse('/reset-password');
+  String get pathTemplate => '/reset-password';
 }
 
 class FakePostLoginDefaultRoute extends ConfigurationBase {
   @override
   bool get protected => true;
   @override
-  Uri get uri => Uri.parse('/home');
+  String get pathTemplate => '/home';
 }
 
 class FakeRootRoute extends ConfigurationBase {
   @override
   bool get isRoot => true;
   @override
-  Uri get uri => Uri.parse('/');
+  String get pathTemplate => '/';
 }
 
 class FakeLogoutRoute extends ConfigurationBase {
   @override
   bool get protected => true;
   @override
-  Uri get uri => Uri.parse('/logout');
+  String get pathTemplate => '/logout';
 }
 
 void main() {
