@@ -839,16 +839,6 @@ class MockAppCoordinatorDelegate extends _i1.Mock
       ) as bool);
 
   @override
-  bool isAuthCallbackRoute(_i8.ConfigurationBase? config) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #isAuthCallbackRoute,
-          [config],
-        ),
-        returnValue: false,
-      ) as bool);
-
-  @override
   _i8.ConfigurationBase? resolveAppSpecificAuthState(
     _i10.AsyncResult<_i9.User>? authState,
     _i8.ConfigurationBase? navRequest,
@@ -882,6 +872,16 @@ class MockAppCoordinatorDelegate extends _i1.Mock
           ),
         ),
       ) as _i8.ConfigurationBase);
+
+  @override
+  bool isAuthCallbackRoute(_i8.ConfigurationBase? config) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #isAuthCallbackRoute,
+          [config],
+        ),
+        returnValue: false,
+      ) as bool);
 }
 
 /// A class which mocks [Controller].
