@@ -6,6 +6,7 @@ import 'package:rxdart/rxdart.dart';
 import 'app_coordinator_delegate.dart';
 import 'controller.dart';
 import 'model/error_models.dart';
+import 'route_table.dart';
 import 'router.dart';
 import 'service/auth_service.dart';
 import 'service/http_service.dart';
@@ -44,6 +45,10 @@ class AppCoordinator extends ChangeNotifier {
   // Add getter for ShellController
   Controller? get shellController => _delegate.shellController;
 
+  /// Built once in the constructor from delegate.routes, before any service
+  /// is registered.
+  RouteTable get routeTable => throw UnimplementedError('not implemented');
+
   AppCoordinator(this._delegate, {AutoInjector? injector})
       : injector = injector ?? AutoInjector() {
     // If an injector was NOT passed in, we are in production.
@@ -55,7 +60,8 @@ class AppCoordinator extends ChangeNotifier {
     authService.initialize();
   }
   void _setupServicesAndControllers() {
-    injector.addSingleton(() => NavigationService(delegate: _delegate));
+    injector.addSingleton(
+        () => NavigationService(delegate: _delegate, routes: routeTable));
     injector.addSingleton<BaseClient>(Client.new);
     injector.addSingleton(HttpService.new);
 
@@ -284,10 +290,7 @@ class AppCoordinator extends ChangeNotifier {
           _disposeControllerAfterRouteUpdate(oldBaseController);
         }
         _baseController = _baseConfiguration != null
-            ? _delegate.createControllerForConfiguration(
-                _baseConfiguration!,
-                injector,
-              )
+            ? throw UnimplementedError('not implemented')
             : null;
       }
 
@@ -296,10 +299,7 @@ class AppCoordinator extends ChangeNotifier {
           _disposeControllerAfterRouteUpdate(oldModalController);
         }
         _modalController = _modalConfiguration != null
-            ? _delegate.createControllerForConfiguration(
-                _modalConfiguration!,
-                injector,
-              )
+            ? throw UnimplementedError('not implemented')
             : null;
       }
       notifyListeners();
@@ -338,27 +338,16 @@ class AppCoordinator extends ChangeNotifier {
           body: Center(child: CircularProgressIndicator()),
         );
       }
-      final errorController = _delegate.createControllerForConfiguration(
-        const ErrorRoute(
-          message: 'error.app.noState',
-          problem: HttpProblem(
-            title: 'Application State Error',
-            detail:
-                "Application state could not be determined (no base controller).",
-          ),
-        ),
-        injector,
-      );
-      return _delegate.mapControllerToWidget(errorController);
+      throw UnimplementedError('not implemented');
     }
-    return _delegate.mapControllerToWidget(_baseController!);
+    throw UnimplementedError('not implemented');
   }
 
   Widget? getModalContentWidget() {
     if (_modalConfiguration == null || _modalController == null) {
       return null;
     }
-    return _delegate.mapControllerToWidget(_modalController!);
+    throw UnimplementedError('not implemented');
   }
 
   @override

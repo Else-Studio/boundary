@@ -76,8 +76,7 @@ class MockDependencyProvider {
     // By default, the delegate does not override any core logic.
     when(mockAppCoordinatorDelegate.resolveAppSpecificAuthState(any, any))
         .thenReturn(null);
-    when(mockAppCoordinatorDelegate.createControllerForConfiguration(any, any))
-        .thenReturn(mockController);
+    when(mockAppCoordinatorDelegate.routes).thenReturn([]);
     when(mockAppCoordinatorDelegate.isPublicOnlyRoute(any)).thenReturn(false);
     when(mockAppCoordinatorDelegate.isLogoutRoute(any)).thenReturn(false);
     when(mockAppCoordinatorDelegate.shouldDisposeController(any))

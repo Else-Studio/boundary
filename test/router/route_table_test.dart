@@ -241,12 +241,29 @@ void main() {
       );
     });
 
-    test('bindings lists the given bindings in order and cannot be modified',
+    test(
+        'bindings lists the given bindings first, in order, and cannot be modified',
         () {
       final table = RouteTable([caseBinding, tagBinding]);
 
-      expect(table.bindings, [caseBinding, tagBinding]);
+      expect(table.bindings, [
+        caseBinding,
+        tagBinding,
+        defaultErrorRouteBinding,
+        defaultNotFoundRouteBinding,
+      ]);
       expect(() => table.bindings.add(homeBinding), throwsUnsupportedError);
+    });
+
+    test('the default bindings come after the app bindings, error first', () {
+      final table = RouteTable([caseBinding]);
+
+      expect(
+        table.bindings.map((b) => b.routeType),
+        [CaseRoute, ErrorRoute, NotFoundRoute],
+      );
+      expect(table.bindings[1], same(defaultErrorRouteBinding));
+      expect(table.bindings[2], same(defaultNotFoundRouteBinding));
     });
   });
 

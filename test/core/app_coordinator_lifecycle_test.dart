@@ -12,6 +12,8 @@
 //   - test: should set an ErrorRoute configuration for unhandled AuthErrors
 //   - test: should default to a known good route if the delegate returns null for a base configuration
 
+import 'package:boundary/controller.dart';
+import 'package:boundary/route_table.dart';
 import 'package:boundary/router.dart';
 import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/utils.dart';
@@ -42,6 +44,37 @@ class FakeModalRoute extends ConfigurationBase {
   @override
   String get pathTemplate => '/modal';
 }
+
+/// A binding for [R] that hands out [controller] and counts how often the
+/// coordinator asked for it.
+class CountingBinding<R extends ConfigurationBase> {
+  CountingBinding(String path, R Function() route, this.controller) {
+    binding = RouteBinding<R, Controller>(
+      path: path,
+      parse: (_) => route(),
+      controller: (_) {
+        created++;
+        return controller;
+      },
+      page: const SizedBox(),
+    );
+  }
+
+  final Controller controller;
+  late final RouteBinding<R, Controller> binding;
+  int created = 0;
+}
+
+CountingBinding<FakeBaseRoute> baseBinding(Controller controller) =>
+    CountingBinding(FakeBaseRoute().pathTemplate, FakeBaseRoute.new, controller);
+
+CountingBinding<FakeOtherBaseRoute> otherBaseBinding(Controller controller) =>
+    CountingBinding(
+        FakeOtherBaseRoute().pathTemplate, FakeOtherBaseRoute.new, controller);
+
+CountingBinding<FakeModalRoute> modalBinding(Controller controller) =>
+    CountingBinding(
+        FakeModalRoute().pathTemplate, FakeModalRoute.new, controller);
 
 void main() {
   group('AppCoordinator Lifecycle and Error Handling', () {
@@ -75,6 +108,9 @@ void main() {
           // Arrange
           final routeRequest = FakeBaseRoute();
           authStreamController.add(const Loading());
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(provider.mockController).binding,
+          ]);
 
           // Act
           final coordinator =
@@ -94,6 +130,10 @@ void main() {
           final baseRoute = FakeBaseRoute();
           final modalRoute = FakeModalRoute();
           authStreamController.add(Data(ModelFactory.createUser()));
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(provider.mockController).binding,
+            modalBinding(MockController()).binding,
+          ]);
 
           // Act
           final coordinator =
@@ -116,16 +156,12 @@ void main() {
           // Arrange
           final routeA = FakeBaseRoute();
           final routeB = FakeOtherBaseRoute();
-          final controllerA = provider.mockController;
-          final controllerB = MockController(); // A different mock instance
+          final bindingA = baseBinding(provider.mockController);
+          final bindingB = otherBaseBinding(MockController());
           authStreamController.add(Data(ModelFactory.createUser()));
 
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(routeA, any))
-              .thenReturn(controllerA);
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(routeB, any))
-              .thenReturn(controllerB);
+          when(provider.mockAppCoordinatorDelegate.routes)
+              .thenReturn([bindingA.binding, bindingB.binding]);
 
           // Act
           SutFactory.createAppCoordinator(provider: provider);
@@ -136,12 +172,8 @@ void main() {
           await Future.delayed(Duration.zero);
 
           // Assert
-          verify(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(routeA, any))
-              .called(1);
-          verify(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(routeB, any))
-              .called(1);
+          expect(bindingA.created, 1);
+          expect(bindingB.created, 1);
         },
       );
 
@@ -155,12 +187,10 @@ void main() {
           final controllerB = MockController();
           authStreamController.add(Data(ModelFactory.createUser()));
 
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(routeA, any))
-              .thenReturn(controllerA);
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(routeB, any))
-              .thenReturn(controllerB);
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(controllerA).binding,
+            otherBaseBinding(controllerB).binding,
+          ]);
           when(provider.mockAppCoordinatorDelegate
                   .shouldDisposeController(controllerA))
               .thenReturn(true);
@@ -188,9 +218,11 @@ void main() {
           final modalController = MockController();
           authStreamController.add(Data(ModelFactory.createUser()));
 
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(modalRoute, any))
-              .thenReturn(modalController);
+          final modalBindingUnderTest = modalBinding(modalController);
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(provider.mockController).binding,
+            modalBindingUnderTest.binding,
+          ]);
 
           // Act
           SutFactory.createAppCoordinator(provider: provider);
@@ -201,9 +233,7 @@ void main() {
           await Future.delayed(Duration.zero);
 
           // Assert
-          verify(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(modalRoute, any))
-              .called(1);
+          expect(modalBindingUnderTest.created, 1);
         },
       );
 
@@ -217,9 +247,11 @@ void main() {
           final modalController = MockController();
           authStreamController.add(Data(ModelFactory.createUser()));
 
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(modalRoute, any))
-              .thenReturn(modalController);
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(provider.mockController).binding,
+            modalBinding(modalController).binding,
+            otherBaseBinding(MockController()).binding,
+          ]);
 
           // Act
           SutFactory.createAppCoordinator(provider: provider);
@@ -245,6 +277,9 @@ void main() {
           // Arrange
           authStreamController
               .add(const Failure(TokenVerificationFailed(message: 'test')));
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(provider.mockController).binding,
+          ]);
 
           // Act
           final coordinator =
@@ -257,46 +292,6 @@ void main() {
           expect(route, isA<ErrorRoute>());
           expect((route as ErrorRoute).isSessionTermination, isTrue);
           expect(route.message, 'error.session.unexpected');
-        },
-      );
-
-      test(
-        'should display a fallback error widget if base controller is null and auth is not loading',
-        () async {
-          // Arrange
-          when(provider.mockAuthService.isLoading).thenReturn(false);
-          authStreamController.add(Data(ModelFactory.createUser()));
-          final mockErrorController = MockController();
-
-          when(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(any, any))
-              .thenAnswer((invocation) {
-            final config = invocation.positionalArguments[0];
-            if (config is ErrorRoute) {
-              return mockErrorController;
-            }
-            // Return the default for other types
-            return provider.mockController;
-          });
-          when(provider.mockAppCoordinatorDelegate
-                  .mapControllerToWidget(mockErrorController))
-              .thenReturn(const SizedBox.shrink());
-
-          // Act
-          final coordinator =
-              SutFactory.createAppCoordinator(provider: provider);
-          // Do not push a nav event, so baseConfiguration remains null
-          await Future.delayed(Duration.zero);
-          coordinator.getBaseContentWidget();
-
-          // Assert
-          final captured = verify(provider.mockAppCoordinatorDelegate
-                  .createControllerForConfiguration(captureAny, any))
-              .captured;
-          expect(captured.single, isA<ErrorRoute>());
-          verify(provider.mockAppCoordinatorDelegate
-                  .mapControllerToWidget(mockErrorController))
-              .called(1);
         },
       );
     });

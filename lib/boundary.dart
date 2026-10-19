@@ -4,6 +4,7 @@ export 'app_coordinator_delegate.dart';
 export 'responsive_framework.dart';
 export 'router.dart';
 export 'route_table.dart';
+export 'default_pages.dart';
 export 'utils.dart';
 export 'model/error_models.dart';
 export 'model/app_config.dart';

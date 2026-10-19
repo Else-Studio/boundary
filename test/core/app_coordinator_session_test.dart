@@ -13,14 +13,17 @@
 //   - test: should navigate to post-login default route when the root path is requested
 //   - test: should allow navigation to the logout route
 
+import 'package:boundary/route_table.dart';
 import 'package:boundary/router.dart';
 import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/utils.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../helpers/mock_dependency_provider.dart';
+import '../helpers/mocks.mocks.dart';
 import '../helpers/model_factory.dart';
 import '../helpers/sut_factory.dart';
 
@@ -78,9 +81,31 @@ void main() {
   group('AppCoordinator Session Flows', () {
     late MockDependencyProvider provider;
 
+    RouteBinding<R, MockController> bind<R extends ConfigurationBase>(
+      String path,
+      R Function() route,
+    ) =>
+        RouteBinding<R, MockController>(
+          path: path,
+          parse: (_) => route(),
+          controller: (_) => provider.mockController,
+          page: const SizedBox(),
+        );
+
     setUp(() async {
       provider = MockDependencyProvider();
       await SutFactory.initTestBed(provider: provider);
+      when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+        bind<FakeUnprotectedRoute>('/unprotected', FakeUnprotectedRoute.new),
+        bind<FakeProtectedRoute>('/protected', FakeProtectedRoute.new),
+        bind<FakeLoginRoute>('/login', FakeLoginRoute.new),
+        bind<FakeResetPasswordRoute>(
+            '/reset-password', FakeResetPasswordRoute.new),
+        bind<FakePostLoginDefaultRoute>(
+            '/home', FakePostLoginDefaultRoute.new),
+        bind<FakeRootRoute>('/', FakeRootRoute.new),
+        bind<FakeLogoutRoute>('/logout', FakeLogoutRoute.new),
+      ]);
     });
 
     group('Unauthenticated User Scenarios', () {

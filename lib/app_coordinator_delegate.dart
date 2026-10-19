@@ -1,8 +1,8 @@
 import 'package:auto_injector/auto_injector.dart';
-import 'package:flutter/widgets.dart';
 
 import 'utils.dart';
 import 'controller.dart';
+import 'route_table.dart';
 import 'router.dart';
 import 'service/auth_service.dart';
 
@@ -11,10 +11,6 @@ import 'service/auth_service.dart';
 ///
 /// This decouples the [NavigationService] from application-specific routing logic.
 abstract class NavigationServiceDelegate {
-  /// Parses the given [uri] and returns the corresponding [ConfigurationBase],
-  /// or `null` if no route matches.
-  ConfigurationBase? parseUri(Uri uri);
-
   ///
   /// Returns the application's default route for an authenticated user
   /// after they have logged in.
@@ -39,20 +35,8 @@ abstract class AppCoordinatorDelegate extends NavigationServiceDelegate {
   /// dependency [injector].
   void registerDependencies(AutoInjector injector);
 
-  /// Creates and initializes the appropriate [Controller] for the given route
-  /// [configuration].
-  ///
-  /// The [injector] is provided to resolve controller dependencies.
-  Controller createControllerForConfiguration(
-    ConfigurationBase configuration,
-    AutoInjector injector,
-  );
-
-  /// Maps the given [controller] instance to its corresponding [Widget] view.
-  ///
-  /// This method is responsible for wrapping the view with any necessary
-  /// [Provider]s.
-  Widget mapControllerToWidget(Controller controller);
+  /// Every destination of the app, in match order.
+  List<RouteBinding> get routes;
 
   Controller? get shellController;
 

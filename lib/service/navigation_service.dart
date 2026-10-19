@@ -3,6 +3,7 @@ import 'dart:convert' show jsonDecode, jsonEncode;
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../route_table.dart';
 import '../router.dart';
 import '../utils.dart';
 import '../app_coordinator_delegate.dart';
@@ -11,6 +12,7 @@ import '../app_coordinator_delegate.dart';
 class NavigationService {
   final _logger = useLogger('NavS');
   final NavigationServiceDelegate _delegate;
+  final RouteTable _routes;
 
   static const String _postAuthRedirectKey = 'post_auth_redirect_intent';
   static const int _redirectIntentLifetimeMinutes = 5;
@@ -23,9 +25,14 @@ class NavigationService {
   ConfigurationBase? get currentRequestedConfiguration =>
       _routeRequest$.valueOrNull;
 
-  NavigationService({required NavigationServiceDelegate delegate})
-      : _delegate = delegate {
-    _logger.verbose("NavigationService initialized");
+  NavigationService({
+    required NavigationServiceDelegate delegate,
+    required RouteTable routes,
+  })  : _delegate = delegate,
+        _routes = routes {
+    _logger.verbose(
+      "NavigationService initialized with ${_routes.bindings.length} routes",
+    );
   }
 
   /// Asynchronously stores the provided [configuration] URI and a timestamp
@@ -88,7 +95,7 @@ class NavigationService {
       }
 
       _logger.info('Found fresh, valid post-auth redirect to: $uriString');
-      return _delegate.parseUri(Uri.parse(uriString));
+      throw UnimplementedError('not implemented');
     } catch (e, s) {
       _logger.error('Failed to parse or validate post-auth intent', e, s);
       return null;

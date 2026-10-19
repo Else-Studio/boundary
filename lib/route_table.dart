@@ -28,6 +28,16 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
   final Widget page;
 
   Type get routeType => R;
+
+  /// Creates the controller with [controller], then calls enter(route) on it.
+  Controller createController(AutoInjector injector, ConfigurationBase route) {
+    throw UnimplementedError('not implemented');
+  }
+
+  /// `Provider<C>.value(value: controller as C, child: page)`.
+  Widget buildView(Controller controller) {
+    throw UnimplementedError('not implemented');
+  }
 }
 
 /// The bindings of an app, and the parsing of URLs into routes.

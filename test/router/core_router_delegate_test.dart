@@ -13,6 +13,7 @@ import 'package:mockito/mockito.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../helpers/mock_dependency_provider.dart';
+import '../helpers/mocks.mocks.dart';
 import '../helpers/model_factory.dart';
 import '../helpers/sut_factory.dart';
 
@@ -71,8 +72,20 @@ void main() {
       when(provider.mockAuthService.isLoading).thenReturn(false);
       when(provider.mockNavigationService.routeRequestStream)
           .thenAnswer((_) => navStream.stream);
-      when(provider.mockAppCoordinatorDelegate.mapControllerToWidget(any))
-          .thenReturn(const SizedBox());
+      when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+        RouteBinding<FakeBaseRoute, MockController>(
+          path: '/base',
+          parse: (_) => FakeBaseRoute(),
+          controller: (_) => provider.mockController,
+          page: const SizedBox(),
+        ),
+        RouteBinding<FakeModalRoute, MockController>(
+          path: '/modal',
+          parse: (_) => FakeModalRoute(),
+          controller: (_) => MockController(),
+          page: const SizedBox(),
+        ),
+      ]);
 
       coordinator = SutFactory.createAppCoordinator(provider: provider);
       delegate = CoreRouterDelegate(

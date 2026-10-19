@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'router.dart';
 import 'utils.dart';
 
 /// An abstract base class for controllers managing state via actions.
@@ -125,6 +126,11 @@ abstract class Controller<A> {
     if (_isDisposed || target.isClosed) return;
     target.add(value);
   }
+
+  /// Called once by the coordinator right after it creates this controller
+  /// for [route], before its view is built. Override with a `covariant`
+  /// parameter of your route type. Default: does nothing.
+  void enter(covariant ConfigurationBase route) {}
 
   /// Whether [dispose] has been called.
   bool get isDisposed => _isDisposed;
