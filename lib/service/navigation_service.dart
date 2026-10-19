@@ -95,7 +95,7 @@ class NavigationService {
       }
 
       _logger.info('Found fresh, valid post-auth redirect to: $uriString');
-      throw UnimplementedError('not implemented');
+      return _routes.parse(Uri.parse(uriString));
     } catch (e, s) {
       _logger.error('Failed to parse or validate post-auth intent', e, s);
       return null;

@@ -47,10 +47,11 @@ class AppCoordinator extends ChangeNotifier {
 
   /// Built once in the constructor from delegate.routes, before any service
   /// is registered.
-  RouteTable get routeTable => throw UnimplementedError('not implemented');
+  late final RouteTable routeTable;
 
   AppCoordinator(this._delegate, {AutoInjector? injector})
       : injector = injector ?? AutoInjector() {
+    routeTable = RouteTable(_delegate.routes);
     // If an injector was NOT passed in, we are in production.
     // Create our own injector and set everything up immediately.
     if (injector == null) {
@@ -290,7 +291,7 @@ class AppCoordinator extends ChangeNotifier {
           _disposeControllerAfterRouteUpdate(oldBaseController);
         }
         _baseController = _baseConfiguration != null
-            ? throw UnimplementedError('not implemented')
+            ? _createController(_baseConfiguration!)
             : null;
       }
 
@@ -299,12 +300,15 @@ class AppCoordinator extends ChangeNotifier {
           _disposeControllerAfterRouteUpdate(oldModalController);
         }
         _modalController = _modalConfiguration != null
-            ? throw UnimplementedError('not implemented')
+            ? _createController(_modalConfiguration!)
             : null;
       }
       notifyListeners();
     }
   }
+
+  Controller _createController(ConfigurationBase route) =>
+      routeTable.bindingFor(route).createController(injector, route);
 
   void _disposeControllerAfterRouteUpdate(Controller controller) {
     if (!_pendingControllerDisposals.add(controller)) return;
@@ -338,16 +342,30 @@ class AppCoordinator extends ChangeNotifier {
           body: Center(child: CircularProgressIndicator()),
         );
       }
-      throw UnimplementedError('not implemented');
+      const route = ErrorRoute(
+        message: 'error.app.noState',
+        problem: HttpProblem(
+          title: 'Application State Error',
+          detail:
+              "Application state could not be determined (no base controller).",
+        ),
+      );
+      return routeTable
+          .bindingFor(route)
+          .buildView(_createController(route));
     }
-    throw UnimplementedError('not implemented');
+    return routeTable
+        .bindingFor(_baseConfiguration!)
+        .buildView(_baseController!);
   }
 
   Widget? getModalContentWidget() {
     if (_modalConfiguration == null || _modalController == null) {
       return null;
     }
-    throw UnimplementedError('not implemented');
+    return routeTable
+        .bindingFor(_modalConfiguration!)
+        .buildView(_modalController!);
   }
 
   @override

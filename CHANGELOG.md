@@ -21,6 +21,13 @@
 *   `RouteTable(bindings)` parses a URL into a route (a parse that throws gives `NotFoundRoute`) and finds a route's binding with `bindingFor`.
 *   `AppRouteInformationParser(RouteTable)` replaces `AppRouteInformationParser({routeMap, defaultRoute})`.
 *   Removed: `ConfigurationBuilder`, `AppRouteInformationParser.parseUri`, `NotFoundRoute.create`, `ErrorRoute.create`; the static `pathTemplate` on `NotFoundRoute` and `ErrorRoute` is now `path`.
+*   `Controller.enter(route)` is called once by the coordinator right after it creates a controller; the default does nothing.
+*   `RouteBinding.createController(injector, route)` creates the controller and calls `enter`; `RouteBinding.buildView(controller)` wraps the page in `Provider<C>.value`, so pages read their controller with `context.read<C>()`.
+*   New dependency: `provider: ^6.1.5+1`.
+*   `AppCoordinatorDelegate.routes` lists every destination as `RouteBinding`s, and `AppCoordinator.routeTable` is the `RouteTable` built from it.
+*   `NavigationService({required delegate, required routes})` parses the stored post-auth redirect with the `RouteTable`.
+*   `RouteTable` appends `defaultErrorRouteBinding` and `defaultNotFoundRouteBinding` for the `ErrorRoute` and `NotFoundRoute` an app does not bind; `DefaultPageController`, `DefaultErrorPage` and `DefaultNotFoundPage` are exported from `boundary.dart`.
+*   Removed: `NavigationServiceDelegate.parseUri`, `AppCoordinatorDelegate.createControllerForConfiguration` and `AppCoordinatorDelegate.mapControllerToWidget`.
 
 ## 0.4.1
 

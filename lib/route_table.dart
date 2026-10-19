@@ -1,7 +1,9 @@
 import 'package:auto_injector/auto_injector.dart';
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import 'controller.dart';
+import 'default_pages.dart';
 import 'router.dart';
 
 /// One destination: its path template, how to parse its route from a URL, and
@@ -20,31 +22,40 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
   /// Path params (decoded) and query params, by name.
   final R Function(Map<String, String> params) parse;
 
-  /// Used from the coordinator slice.
+  /// Creates the controller for this destination.
   final C Function(AutoInjector injector) controller;
 
-  /// Used from the coordinator slice: the view, which reads its controller
-  /// from Provider.
+  /// The view, which reads its controller from Provider.
   final Widget page;
 
   Type get routeType => R;
 
   /// Creates the controller with [controller], then calls enter(route) on it.
   Controller createController(AutoInjector injector, ConfigurationBase route) {
-    throw UnimplementedError('not implemented');
+    final created = controller(injector);
+    created.enter(route as R);
+    return created;
   }
 
   /// `Provider<C>.value(value: controller as C, child: page)`.
   Widget buildView(Controller controller) {
-    throw UnimplementedError('not implemented');
+    return Provider<C>.value(value: controller as C, child: page);
   }
 }
 
 /// The bindings of an app, and the parsing of URLs into routes.
 class RouteTable {
   /// Throws ArgumentError when two bindings have the same route type.
+  /// Appends defaultErrorRouteBinding and defaultNotFoundRouteBinding, in that
+  /// order, for each of the two route types the list does not bind.
   RouteTable(List<RouteBinding> bindings)
-      : _bindings = List.unmodifiable(bindings) {
+      : _bindings = List.unmodifiable([
+          ...bindings,
+          if (!bindings.any((b) => b.routeType == ErrorRoute))
+            defaultErrorRouteBinding,
+          if (!bindings.any((b) => b.routeType == NotFoundRoute))
+            defaultNotFoundRouteBinding,
+        ]) {
     for (final binding in _bindings) {
       if (_byType.containsKey(binding.routeType)) {
         throw ArgumentError.value(
@@ -62,7 +73,7 @@ class RouteTable {
   final Map<Type, RouteBinding> _byType = {};
   final List<RegExp> _patterns = [];
 
-  /// The bindings, unmodifiable, in the order given.
+  /// The bindings, unmodifiable: the given ones in order, then the defaults.
   List<RouteBinding> get bindings => _bindings;
 
   /// The first binding (in order) whose path matches uri.path parses it.
