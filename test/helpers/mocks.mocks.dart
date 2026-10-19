@@ -767,16 +767,6 @@ class MockAppCoordinatorDelegate extends _i1.Mock
       ) as List<_i14.RouteGuard>);
 
   @override
-  bool shouldDisposeController(_i15.Controller<dynamic>? controller) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #shouldDisposeController,
-          [controller],
-        ),
-        returnValue: false,
-      ) as bool);
-
-  @override
   _i5.ConfigurationBase getPostLoginDefaultRoute() => (super.noSuchMethod(
         Invocation.method(
           #getPostLoginDefaultRoute,

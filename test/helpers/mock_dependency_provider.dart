@@ -76,8 +76,6 @@ class MockDependencyProvider {
     // By default, the delegate does not override any core logic.
     when(mockAppCoordinatorDelegate.routes).thenReturn([]);
     when(mockAppCoordinatorDelegate.createGuards(any)).thenReturn([]);
-    when(mockAppCoordinatorDelegate.shouldDisposeController(any))
-        .thenReturn(true);
 
     // --- SharedPreferences ---
     // A valid, empty SharedPreferences instance is available by default.

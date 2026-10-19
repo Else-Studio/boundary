@@ -1,6 +1,5 @@
 import 'package:auto_injector/auto_injector.dart';
 
-import 'controller.dart';
 import 'route_table.dart';
 import 'router.dart';
 
@@ -35,13 +34,4 @@ abstract class AppCoordinatorDelegate extends NavigationServiceDelegate {
   /// Called once, in the AppCoordinator constructor, after services are
   /// registered. Guards run in list order.
   List<RouteGuard> createGuards(AutoInjector injector);
-
-  Controller? get shellController;
-
-  /// Determines whether a given [controller] should be disposed when it's
-  /// no longer the active controller.
-  ///
-  /// This is used to implement caching strategies, for instance, keeping
-  /// controllers for main tabs alive on mobile platforms.
-  bool shouldDisposeController(Controller? controller);
 }

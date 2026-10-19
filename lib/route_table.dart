@@ -36,6 +36,28 @@ abstract interface class RouteGuard {
   FutureOr<GuardResult> check(ConfigurationBase route);
 }
 
+/// A layout around pages: a controller and a widget builder. Declare each
+/// layout once and give the same instance to every binding that shares it.
+class LayoutBinding<C extends Controller> {
+  const LayoutBinding({required this.controller, required this.builder});
+
+  final C Function(AutoInjector injector) controller;
+
+  /// The layout around a page, e.g. (child) => ShellPage(child: child).
+  /// It reads its controller with `context.read<C>()`.
+  final Widget Function(Widget child) builder;
+
+  /// Creates the layout controller. No enter: a layout is not a route.
+  Controller createController(AutoInjector injector) {
+    throw UnimplementedError('not implemented');
+  }
+
+  /// `Provider<C>.value(value: controller as C, child: builder(child))`.
+  Widget wrap(Controller controller, Widget child) {
+    throw UnimplementedError('not implemented');
+  }
+}
+
 /// One destination: its path template, how to parse its route from a URL, and
 /// how to build its controller and page.
 class RouteBinding<R extends ConfigurationBase, C extends Controller> {
@@ -46,6 +68,7 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
     required this.page,
     this.access = RouteAccess.protected,
     this.transient = false,
+    this.layout,
   });
 
   /// R's `static const path`, e.g. `CaseRoute.path`.
@@ -64,6 +87,11 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
 
   /// Never kept as the "last base" in NavigationService.
   final bool transient;
+
+  /// Wraps the base page. Ignored when the route is shown as a modal.
+  /// Two bindings share a layout when they hold the identical LayoutBinding
+  /// instance; declare each layout once and reuse it.
+  final LayoutBinding? layout;
 
   Type get routeType => R;
 

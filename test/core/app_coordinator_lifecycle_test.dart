@@ -191,9 +191,6 @@ void main() {
             baseBinding(controllerA).binding,
             otherBaseBinding(controllerB).binding,
           ]);
-          when(provider.mockAppCoordinatorDelegate
-                  .shouldDisposeController(controllerA))
-              .thenReturn(true);
 
           // Act
           SutFactory.createAppCoordinator(provider: provider);

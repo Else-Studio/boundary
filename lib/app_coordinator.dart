@@ -42,8 +42,9 @@ class AppCoordinator extends ChangeNotifier {
   NavigationService get navigationService => injector.get<NavigationService>();
   AuthService get authService => injector.get<AuthService>();
 
-  // Add getter for ShellController
-  Controller? get shellController => _delegate.shellController;
+  /// The controller of the current base route's layout, or null.
+  Controller? get layoutController =>
+      throw UnimplementedError('not implemented');
 
   /// Built once in the constructor from delegate.routes, before any service
   /// is registered.
@@ -288,8 +289,7 @@ class AppCoordinator extends ChangeNotifier {
 
       if (baseConfigChanged) {
         if (!_updateInPlace(oldBaseController, oldBaseConfig, nextBaseConfig)) {
-          if (oldBaseController != null &&
-              _delegate.shouldDisposeController(oldBaseController)) {
+          if (oldBaseController != null) {
             _disposeControllerAfterRouteUpdate(oldBaseController);
           }
           _baseController = _baseConfiguration != null
