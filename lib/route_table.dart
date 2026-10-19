@@ -48,13 +48,11 @@ class LayoutBinding<C extends Controller> {
   final Widget Function(Widget child) builder;
 
   /// Creates the layout controller. No enter: a layout is not a route.
-  Controller createController(AutoInjector injector) {
-    throw UnimplementedError('not implemented');
-  }
+  Controller createController(AutoInjector injector) => controller(injector);
 
   /// `Provider<C>.value(value: controller as C, child: builder(child))`.
   Widget wrap(Controller controller, Widget child) {
-    throw UnimplementedError('not implemented');
+    return Provider<C>.value(value: controller as C, child: builder(child));
   }
 }
 

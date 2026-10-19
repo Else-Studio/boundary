@@ -13,8 +13,6 @@ import 'service/http_service.dart';
 import 'service/navigation_service.dart';
 import 'utils.dart';
 
-// Import ShellController to add getter
-
 class AppCoordinator extends ChangeNotifier {
   final _logger = useLogger('ApCo');
   final AutoInjector injector;
@@ -24,8 +22,9 @@ class AppCoordinator extends ChangeNotifier {
   ConfigurationBase? _modalConfiguration;
   Controller? _baseController;
   Controller? _modalController;
+  LayoutBinding? _layout;
+  Controller? _layoutController;
 
-  final Map<Type, Controller> _longLivedControllerCache = {};
   final Set<Controller> _pendingControllerDisposals = {};
 
   final _compositeSubscription = CompositeSubscription();
@@ -43,8 +42,7 @@ class AppCoordinator extends ChangeNotifier {
   AuthService get authService => injector.get<AuthService>();
 
   /// The controller of the current base route's layout, or null.
-  Controller? get layoutController =>
-      throw UnimplementedError('not implemented');
+  Controller? get layoutController => _layoutController;
 
   /// Built once in the constructor from delegate.routes, before any service
   /// is registered.
@@ -288,6 +286,7 @@ class AppCoordinator extends ChangeNotifier {
       _modalConfiguration = nextModalConfig;
 
       if (baseConfigChanged) {
+        _updateLayout(nextBaseConfig);
         if (!_updateInPlace(oldBaseController, oldBaseConfig, nextBaseConfig)) {
           if (oldBaseController != null) {
             _disposeControllerAfterRouteUpdate(oldBaseController);
@@ -315,6 +314,17 @@ class AppCoordinator extends ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  /// Keeps the layout controller while [next] shares the current layout.
+  /// Otherwise disposes it and creates the new layout's controller.
+  void _updateLayout(ConfigurationBase? next) {
+    final nextLayout = next == null ? null : routeTable.bindingFor(next).layout;
+    if (identical(nextLayout, _layout)) return;
+    final old = _layoutController;
+    if (old != null) _disposeControllerAfterRouteUpdate(old);
+    _layout = nextLayout;
+    _layoutController = nextLayout?.createController(injector);
   }
 
   /// Calls [RouteAware.update] when [controller] stays for a route of the
@@ -379,9 +389,12 @@ class AppCoordinator extends ChangeNotifier {
       );
       return routeTable.bindingFor(route).buildView(_createController(route));
     }
-    return routeTable
-        .bindingFor(_baseConfiguration!)
-        .buildView(_baseController!);
+    final binding = routeTable.bindingFor(_baseConfiguration!);
+    final page = binding.buildView(_baseController!);
+    final layout = binding.layout;
+    final layoutController = _layoutController;
+    if (layout == null || layoutController == null) return page;
+    return layout.wrap(layoutController, page);
   }
 
   Widget? getModalContentWidget() {
@@ -406,10 +419,7 @@ class AppCoordinator extends ChangeNotifier {
       controller.dispose();
     }
     _pendingControllerDisposals.clear();
-    for (var c in _longLivedControllerCache.values) {
-      c.dispose();
-    }
-    _longLivedControllerCache.clear();
+    _layoutController?.dispose();
 
     injector.dispose();
     super.dispose();

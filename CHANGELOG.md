@@ -38,6 +38,13 @@
 *   `defaultErrorRouteBinding` and `defaultNotFoundRouteBinding` are `public`.
 *   Removed: `ConfigurationBase.isProtected` and `protected`, `NavigationServiceDelegate.isAuthCallbackRoute`, `AppCoordinatorDelegate.isPublicOnlyRoute`, `isLogoutRoute`, `getResetPasswordRoute` and `resolveAppSpecificAuthState`.
 *   Removed: `LoggedOut.emailForResetPassword` and the `resetPassword` parameter of `confirmLocalLogout()`.
+*   `LayoutBinding(controller, builder)` is new: a layout around pages with its own controller, provided with `Provider<C>.value`.
+*   `RouteBinding.layout` names a `LayoutBinding`; bindings that hold the identical instance share it. The coordinator creates the layout controller before the route's controller, keeps it while consecutive base routes share the layout, and disposes it when a route without it is shown; a modal never changes the layout.
+*   `AppCoordinator.layoutController` is the current base route's layout controller, or null.
+*   Removed: `AppCoordinatorDelegate.shellController`; apps declare a `LayoutBinding` per route instead.
+*   Removed: `AppCoordinatorDelegate.shouldDisposeController`; every replaced base controller is now disposed.
+*   Removed: `AppCoordinator.shellController`.
+*   Removed: the private `_longLivedControllerCache`; there is no keep-alive.
 
 ## 0.4.1
 
