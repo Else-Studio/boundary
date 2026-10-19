@@ -8,6 +8,12 @@
 *   `AppCoordinator.localeService` and the `LocaleService` registration are removed; `locale_service.dart` is no longer exported from `boundary.dart`.
 *   `AppConfig` keeps only `baseUrl` and `debounceTime`; `publicWebOrigin`, `sseWatchdogTimeout` and `sseMinRetryDelay` are removed.
 *   `AppFormatters.formatCurrency` requires `symbol`; the `'€ '` default is removed.
+*   `Controller.handleAction` returns `FutureOr<void>`, so it can be `async`; actions still run concurrently.
+*   `Controller.onError(error, stackTrace)` receives every action error, sync or async; the default logs it.
+*   `Controller.own(resource)` registers subscriptions, stream controllers and subjects, timers, `CompositeSubscription`s, child controllers and `ChangeNotifier`s for disposal, in reverse order.
+*   `Controller.emit(target, value)` adds to a stream controller unless the controller is disposed or the target is closed.
+*   `Controller.isDisposed` is public, and `Controller.dispose()` is idempotent.
+*   `Controller.addSubscription` is removed; use `own`.
 
 ## 0.4.1
 

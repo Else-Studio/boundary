@@ -962,16 +962,6 @@ class MockController<A> extends _i1.Mock implements _i5.Controller<A> {
       );
 
   @override
-  void addSubscription(_i11.StreamSubscription<dynamic>? sub) =>
-      super.noSuchMethod(
-        Invocation.method(
-          #addSubscription,
-          [sub],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
   void dispose() => super.noSuchMethod(
         Invocation.method(
           #dispose,

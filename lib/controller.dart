@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:rxdart/rxdart.dart';
 
 import 'utils.dart';
 
@@ -16,17 +17,19 @@ abstract class Controller<A> {
   // Subscription to the internal action stream.
   StreamSubscription<A>? _actionSubscription;
 
-  // Holds external subscriptions (e.g., from services) managed by this controller.
-  final List<StreamSubscription> _externalSubscriptions = [];
+  // Release closures for owned resources, in registration order.
+  final List<FutureOr<void> Function()> _releasers = [];
+
+  bool _isDisposed = false;
 
   Controller() {
     _actionController = StreamController<A>();
-    _actionSubscription = _actionController.stream.listen(handleAction);
+    _actionSubscription = _actionController.stream.listen(_run);
   }
 
-  /// Dispatches an action [A] from the View to be processed by the controller.
+  /// Queues [action] for [handleAction]. After dispose: logs a warning, no-op.
   void dispatch(A action) {
-    if (_actionController.isClosed) {
+    if (_isDisposed || _actionController.isClosed) {
       appLogger.warning(
         'Attempted to dispatch action ($action) on a disposed controller ($runtimeType).',
       );
@@ -35,53 +38,113 @@ abstract class Controller<A> {
     _actionController.add(action);
   }
 
-  /// Handles the incoming [action] dispatched via the stream.
+  // Runs one action without awaiting it, so actions run concurrently, and
+  // sends every error, sync or async, to [onError].
+  void _run(A action) {
+    try {
+      final result = handleAction(action);
+      if (result is Future<void>) result.catchError(_report);
+    } catch (e, s) {
+      _report(e, s);
+    }
+  }
+
+  void _report(Object error, StackTrace stackTrace) {
+    onError(error, stackTrace);
+  }
+
+  /// Runs once per dispatched action. Actions are not awaited one after
+  /// another: a second action starts while a first async one is still running.
   ///
   /// Subclasses MUST implement this method to define their specific logic
   /// for reacting to actions.
   @protected
   FutureOr<void> handleAction(A action);
 
-  /// Receives every error thrown by [handleAction], sync or async.
+  /// Receives every error thrown by [handleAction], sync or async, including
+  /// one that completes after [dispose]. Default: logs it with
+  /// `appLogger.error` and returns. Never rethrow from here.
   @protected
   void onError(Object error, StackTrace stackTrace) {
-    throw UnimplementedError('not implemented');
+    appLogger.error(
+      'Unhandled error in $runtimeType action: $error',
+      error,
+      stackTrace,
+    );
   }
 
   /// Registers [resource] to be released by [dispose], and returns it.
+  ///
+  /// Accepted types and how each is released:
+  /// - [StreamSubscription]: `cancel()`
+  /// - [StreamController] (includes rxdart Subjects): `close()`
+  /// - [Timer]: `cancel()`
+  /// - [CompositeSubscription]: `dispose()`
+  /// - [Controller]: `dispose()`
+  /// - [ChangeNotifier] (TextEditingController, FocusNode, ...): `dispose()`
+  ///
+  /// Any other type throws [ArgumentError]. Called after [dispose], it
+  /// releases [resource] at once and returns it.
   @protected
   T own<T extends Object>(T resource) {
-    throw UnimplementedError('not implemented');
+    final FutureOr<void> Function() release = switch (resource) {
+      // CompositeSubscription is itself a StreamSubscription, so it goes first.
+      CompositeSubscription() => resource.dispose,
+      StreamSubscription() => resource.cancel,
+      StreamController() => resource.close,
+      Timer() => resource.cancel,
+      Controller() => resource.dispose,
+      ChangeNotifier() => resource.dispose,
+      _ => throw ArgumentError.value(
+        resource,
+        'resource',
+        'Cannot own a ${resource.runtimeType}: no known way to release it.',
+      ),
+    };
+    if (_isDisposed) {
+      _releaseOne(release);
+    } else {
+      _releasers.add(release);
+    }
+    return resource;
+  }
+
+  void _releaseOne(FutureOr<void> Function() release) {
+    try {
+      final result = release();
+      if (result is Future<void>) result.catchError(_report);
+    } catch (e, s) {
+      _report(e, s);
+    }
   }
 
   /// Adds [value] to [target] unless this controller is disposed or [target]
-  /// is closed.
+  /// is closed. Never throws for those two cases.
   @protected
   void emit<T>(StreamController<T> target, T value) {
-    throw UnimplementedError('not implemented');
+    if (_isDisposed || target.isClosed) return;
+    target.add(value);
   }
 
   /// Whether [dispose] has been called.
-  bool get isDisposed => throw UnimplementedError('not implemented');
+  bool get isDisposed => _isDisposed;
 
-  /// Adds an external [sub]scription (e.g., from a service stream)
-  /// to be automatically cancelled when this controller is disposed.
-  @protected
-  void addSubscription(StreamSubscription sub) {
-    _externalSubscriptions.add(sub);
-  }
-
-  /// Cleans up controller resources.
-  /// Subclasses overriding this method MUST call `super.dispose()`.
+  /// Cleans up controller resources. Idempotent.
+  ///
+  /// Releases owned resources in reverse order of [own] calls. An error
+  /// thrown while releasing one goes to [onError]; the rest are still
+  /// released. Subclasses overriding this method MUST call `super.dispose()`.
   @mustCallSuper
   void dispose() {
+    if (_isDisposed) return;
+    _isDisposed = true;
     _actionSubscription?.cancel();
     _actionSubscription = null;
     _actionController.close();
 
-    for (final sub in _externalSubscriptions) {
-      sub.cancel();
+    for (final release in _releasers.reversed.toList()) {
+      _releaseOne(release);
     }
-    _externalSubscriptions.clear();
+    _releasers.clear();
   }
 }
