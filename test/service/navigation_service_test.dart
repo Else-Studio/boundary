@@ -91,6 +91,59 @@ class _NoteModalRoute extends ConfigurationBase {
   Map<String, String> get params => {'id': '$id'};
 }
 
+class _CasesRoute extends ConfigurationBase {
+  static const String path = '/cases';
+
+  const _CasesRoute();
+
+  @override
+  String get pathTemplate => path;
+}
+
+class _CaseDetailRoute extends ConfigurationBase {
+  static const String path = '/cases/:id';
+
+  const _CaseDetailRoute(this.id);
+
+  final String id;
+
+  @override
+  String get pathTemplate => path;
+
+  @override
+  Map<String, String> get params => {'id': id};
+
+  @override
+  ConfigurationBase? get parent => const _CasesRoute();
+}
+
+class _SessionNoteRoute extends ConfigurationBase {
+  static const String path = '/cases/:caseId/sessions/:sessionId';
+
+  const _SessionNoteRoute(this.caseId, this.sessionId);
+
+  final String caseId;
+  final String sessionId;
+
+  @override
+  String get pathTemplate => path;
+
+  @override
+  Map<String, String> get params => {'caseId': caseId, 'sessionId': sessionId};
+
+  @override
+  ConfigurationBase? get parent => _CaseDetailRoute(caseId);
+}
+
+class _CaseNoteModalRoute extends ConfigurationBase {
+  static const String path = '/note';
+
+  const _CaseNoteModalRoute() : super(isModal: true);
+
+  @override
+  String get pathTemplate => path;
+}
+
 final _caseBinding = _bind<_CaseRoute>(
   _CaseRoute.path,
   (p) => _CaseRoute(int.parse(p['id']!)),
@@ -265,6 +318,66 @@ void main() {
         service.modalRouteStream,
         emitsInOrder([anything, emitsDone]),
       );
+    });
+  });
+
+  group('navigateUp', () {
+    late NavigationService service;
+
+    setUp(() {
+      service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: _routes(),
+      );
+    });
+
+    tearDown(() => service.dispose());
+
+    test('goes to the parent of the shown base route, step by step', () {
+      service.onRouteResolved(
+          base: const _SessionNoteRoute('c1', 's1'), modal: null);
+
+      expect(service.navigateUp(), isTrue);
+      expect(
+          service.currentRequestedConfiguration, const _CaseDetailRoute('c1'));
+
+      service.onRouteResolved(base: const _CaseDetailRoute('c1'), modal: null);
+
+      expect(service.navigateUp(), isTrue);
+      expect(service.currentRequestedConfiguration, const _CasesRoute());
+    });
+
+    test('at a route with no parent does nothing', () {
+      service.navigateTo(const _CasesRoute());
+      service.onRouteResolved(base: const _CasesRoute(), modal: null);
+
+      expect(service.navigateUp(), isFalse);
+      expect(service.currentRequestedConfiguration, const _CasesRoute());
+    });
+
+    test('with nothing shown does nothing', () {
+      expect(service.navigateUp(), isFalse);
+      expect(service.currentRequestedConfiguration, isNull);
+    });
+
+    test('closes a shown modal first, back to the last base route', () {
+      service.navigateTo(const _CaseDetailRoute('c1'));
+      service.navigateTo(const _CaseNoteModalRoute());
+      service.onRouteResolved(
+          base: const _CaseDetailRoute('c1'),
+          modal: const _CaseNoteModalRoute());
+
+      expect(service.navigateUp(), isTrue);
+      expect(
+          service.currentRequestedConfiguration, const _CaseDetailRoute('c1'));
+    });
+
+    test('uses the shown route, not the requested one, after a redirect', () {
+      service.navigateTo(const _SessionNoteRoute('c1', 's1'));
+      service.onRouteResolved(base: const _CaseDetailRoute('c1'), modal: null);
+
+      expect(service.navigateUp(), isTrue);
+      expect(service.currentRequestedConfiguration, const _CasesRoute());
     });
   });
 }

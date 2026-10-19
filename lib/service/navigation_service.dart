@@ -182,6 +182,13 @@ class NavigationService {
     _navigateToLastBaseOr(_delegate.getPostLoginDefaultRoute());
   }
 
+  /// One step up. A shown modal: dismissModal(), returns true. Otherwise the
+  /// shown base has a parent: navigateTo(parent), returns true. Otherwise
+  /// returns false and requests nothing.
+  bool navigateUp() {
+    throw UnimplementedError('not implemented');
+  }
+
   void _navigateToLastBaseOr(ConfigurationBase fallback) {
     // Only navigate back to the previous base if it is known. Transient
     // routes are never kept as the last base.

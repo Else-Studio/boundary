@@ -483,6 +483,15 @@ class MockNavigationService extends _i1.Mock implements _i9.NavigationService {
       );
 
   @override
+  bool navigateUp() => (super.noSuchMethod(
+        Invocation.method(
+          #navigateUp,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
   void dispose() => super.noSuchMethod(
         Invocation.method(
           #dispose,

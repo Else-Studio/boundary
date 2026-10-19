@@ -36,6 +36,11 @@ abstract class ConfigurationBase {
   /// and is accessed directly (deep-linked) without an existing base context.
   ConfigurationBase? get defaultBaseRoute => null;
 
+  /// Where back goes from this route when no modal is shown, e.g.
+  /// SessionNoteRoute(caseId, sessionId).parent => CaseDetailRoute(caseId).
+  /// null: a top route; back leaves the app (the platform decides).
+  ConfigurationBase? get parent => null;
+
   /// Same runtimeType and equal [uri].
   @override
   bool operator ==(Object other) =>

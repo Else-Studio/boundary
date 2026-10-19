@@ -5,6 +5,9 @@
 //   - test: system back without a modal does not dismiss anything
 //   - test: system back on a modal built as a plain page does not dismiss
 //   - test: the coordinator closing a modal does not dismiss it again
+//   - test: system back on a base page asks NavigationService to go up
+//   - test: system back at a top route leaves the app
+//   - test: system back on a modal pops it and does not go up
 
 import 'package:boundary/boundary.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +30,27 @@ class FakeModalRoute extends ConfigurationBase {
   bool get isModal => true;
   @override
   String get pathTemplate => '/modal';
+}
+
+class FakeCasesRoute extends ConfigurationBase {
+  @override
+  String get pathTemplate => '/cases';
+}
+
+class FakeCaseDetailRoute extends ConfigurationBase {
+  @override
+  String get pathTemplate => '/cases/:id';
+  @override
+  Map<String, String> get params => {'id': 'c1'};
+  @override
+  ConfigurationBase? get parent => FakeCasesRoute();
+}
+
+class FakeNoteModalRoute extends ConfigurationBase {
+  @override
+  bool get isModal => true;
+  @override
+  String get pathTemplate => '/note';
 }
 
 class PlainPageBuilder implements RouterPageBuilder {
@@ -85,6 +109,24 @@ void main() {
           controller: (_) => MockController(),
           page: const SizedBox(),
         ),
+        RouteBinding<FakeCasesRoute, MockController>(
+          path: '/cases',
+          parse: (_) => FakeCasesRoute(),
+          controller: (_) => MockController(),
+          page: const SizedBox(),
+        ),
+        RouteBinding<FakeCaseDetailRoute, MockController>(
+          path: '/cases/:id',
+          parse: (_) => FakeCaseDetailRoute(),
+          controller: (_) => MockController(),
+          page: const SizedBox(),
+        ),
+        RouteBinding<FakeNoteModalRoute, MockController>(
+          path: '/note',
+          parse: (_) => FakeNoteModalRoute(),
+          controller: (_) => MockController(),
+          page: const SizedBox(),
+        ),
       ]);
 
       coordinator = SutFactory.createAppCoordinator(provider: provider);
@@ -126,6 +168,7 @@ void main() {
 
     testWidgets('system back without a modal does not dismiss anything',
         (tester) async {
+      when(provider.mockNavigationService.navigateUp()).thenReturn(false);
       await emit(tester, FakeBaseRoute());
       await pumpRouter(tester);
 
@@ -166,6 +209,46 @@ void main() {
 
       expect(coordinator.modalConfiguration, isNull);
       verifyNever(provider.mockNavigationService.dismissModal());
+    });
+
+    testWidgets('system back on a base page asks NavigationService to go up',
+        (tester) async {
+      when(provider.mockNavigationService.navigateUp()).thenReturn(true);
+      await emit(tester, FakeCaseDetailRoute());
+      await pumpRouter(tester);
+
+      final handled = await delegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      verify(provider.mockNavigationService.navigateUp()).called(1);
+      verifyNever(provider.mockNavigationService.dismissModal());
+    });
+
+    testWidgets('system back at a top route leaves the app', (tester) async {
+      when(provider.mockNavigationService.navigateUp()).thenReturn(false);
+      await emit(tester, FakeCasesRoute());
+      await pumpRouter(tester);
+
+      final handled = await delegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isFalse);
+    });
+
+    testWidgets('system back on a modal pops it and does not go up',
+        (tester) async {
+      await emit(tester, FakeCaseDetailRoute());
+      await emit(tester, FakeNoteModalRoute());
+      await pumpRouter(tester);
+      expect(coordinator.modalConfiguration, isA<FakeNoteModalRoute>());
+
+      final handled = await delegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      verify(provider.mockNavigationService.dismissModal()).called(1);
+      verifyNever(provider.mockNavigationService.navigateUp());
     });
   });
 }
