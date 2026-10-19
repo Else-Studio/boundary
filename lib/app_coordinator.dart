@@ -132,10 +132,7 @@ class AppCoordinator extends ChangeNotifier {
     ConfigurationBase? determinedConfig;
 
     // Phase 1: Give the application-specific delegate the first chance to handle the state.
-    final appSpecificRoute = _delegate.resolveAppSpecificAuthState(
-      authState,
-      navRequest,
-    );
+    final ConfigurationBase? appSpecificRoute = null;
 
     if (appSpecificRoute != null) {
       _logger.info(
@@ -154,13 +151,13 @@ class AppCoordinator extends ChangeNotifier {
       _logger.info("Auth state is Failure: ${error.runtimeType}");
 
       switch (error) {
-        case LoggedOut(:final emailForResetPassword):
+        case LoggedOut():
           _logger.info("LoggedOut state detected. Navigating...");
 
           // If we are currently on the logout route, we should NOT navigate away.
           // The LogoutController is responsible for the final redirect to the
           // authentication server (e.g., Keycloak).
-          if (_delegate.isLogoutRoute(navRequest)) {
+          if (false) {
             _logger.info(
               "LoggedOut state detected while on LogoutRoute. Letting the controller handle the final redirect.",
             );
@@ -168,13 +165,7 @@ class AppCoordinator extends ChangeNotifier {
           } else {
             authService.clearLoggedOutStateAndPrepareForPolicyCheck();
 
-            if (emailForResetPassword != null) {
-              navigationService.navigateTo(
-                _delegate.getResetPasswordRoute(email: emailForResetPassword),
-              );
-            } else {
-              navigationService.navigateTo(_delegate.getLoginRoute());
-            }
+            navigationService.navigateTo(_delegate.getLoginRoute());
             return;
           }
           break;
@@ -184,7 +175,7 @@ class AppCoordinator extends ChangeNotifier {
             "No session or session expired (${error.runtimeType}). NavRequest: ${navRequest.runtimeType}",
           );
 
-          if (navRequest.protected) {
+          if (true) {
             _logger.info(
               "Protected route ${navRequest.runtimeType} requested. Storing for post-auth redirect.",
             );
@@ -227,12 +218,12 @@ class AppCoordinator extends ChangeNotifier {
       }
       // Delegate handles what happens if an authenticated user lands on a page
       // they shouldn't be on (like login).
-      else if (_delegate.isPublicOnlyRoute(navRequest)) {
+      else if (false) {
         _logger.info(
           "Authenticated: navRequest was ${navRequest.runtimeType} (a public-only route). Redirecting to default.",
         );
         determinedConfig = _delegate.getPostLoginDefaultRoute();
-      } else if (_delegate.isLogoutRoute(navRequest)) {
+      } else if (false) {
         _logger.info("Authenticated: LogoutRoute requested. Allowing.");
         determinedConfig = navRequest;
       } else if (navRequest.isRoot) {

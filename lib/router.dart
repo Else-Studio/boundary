@@ -12,19 +12,12 @@ import 'utils.dart';
 /// Each configuration represents a specific destination or state that can be
 /// navigated to, and is responsible for generating its corresponding [Uri].
 abstract class ConfigurationBase {
-  /// Indicates whether this route requires user authentication.
-  final bool isProtected;
-
   final bool isRoot;
 
   final bool isModal;
 
   /// Creates a base configuration.
-  const ConfigurationBase({
-    this.isProtected = true,
-    this.isRoot = false,
-    this.isModal = false,
-  });
+  const ConfigurationBase({this.isRoot = false, this.isModal = false});
 
   /// The path template this route is bound under, e.g. '/cases/:id'.
   /// Declare it once as `static const path` on the route, return it here,
@@ -38,9 +31,6 @@ abstract class ConfigurationBase {
 
   /// Built by [buildRouteUri] from [pathTemplate] and [params]. May be overridden.
   Uri get uri => buildRouteUri(pathTemplate, params);
-
-  /// Getter to access the protection status of the route.
-  bool get protected => isProtected;
 
   /// Optional: Defines a default base route to be used if this route is a modal
   /// and is accessed directly (deep-linked) without an existing base context.
@@ -66,8 +56,7 @@ class NotFoundRoute extends ConfigurationBase {
   static const String path = '/404';
   final String originalUrl;
 
-  /// Creates a NotFoundRoute. It is not protected.
-  const NotFoundRoute(this.originalUrl) : super(isProtected: false);
+  const NotFoundRoute(this.originalUrl);
 
   @override
   String get pathTemplate => path;
@@ -91,12 +80,11 @@ class ErrorRoute extends ConfigurationBase {
   final HttpProblem? problem;
   final bool isSessionTermination;
 
-  /// Creates an ErrorRoute. It is not protected.
   const ErrorRoute({
     required this.message,
     this.problem,
     this.isSessionTermination = false,
-  }) : super(isProtected: false);
+  });
 
   @override
   String get pathTemplate => path;

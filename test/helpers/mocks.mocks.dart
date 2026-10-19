@@ -221,12 +221,10 @@ class MockAuthService extends _i1.Mock implements _i6.AuthService {
       ) as _i8.Future<Uri>);
 
   @override
-  _i8.Future<void> confirmLocalLogout({bool? resetPassword = false}) =>
-      (super.noSuchMethod(
+  _i8.Future<void> confirmLocalLogout() => (super.noSuchMethod(
         Invocation.method(
           #confirmLocalLogout,
           [],
-          {#resetPassword: resetPassword},
         ),
         returnValue: _i8.Future<void>.value(),
         returnValueForMissingStub: _i8.Future<void>.value(),
@@ -759,6 +757,16 @@ class MockAppCoordinatorDelegate extends _i1.Mock
       );
 
   @override
+  List<_i14.RouteGuard> createGuards(_i16.AutoInjector? injector) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #createGuards,
+          [injector],
+        ),
+        returnValue: <_i14.RouteGuard>[],
+      ) as List<_i14.RouteGuard>);
+
+  @override
   bool shouldDisposeController(_i15.Controller<dynamic>? controller) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -767,70 +775,6 @@ class MockAppCoordinatorDelegate extends _i1.Mock
         ),
         returnValue: false,
       ) as bool);
-
-  @override
-  _i5.ConfigurationBase getLoginRoute() => (super.noSuchMethod(
-        Invocation.method(
-          #getLoginRoute,
-          [],
-        ),
-        returnValue: _FakeConfigurationBase_5(
-          this,
-          Invocation.method(
-            #getLoginRoute,
-            [],
-          ),
-        ),
-      ) as _i5.ConfigurationBase);
-
-  @override
-  _i5.ConfigurationBase getResetPasswordRoute({String? email}) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #getResetPasswordRoute,
-          [],
-          {#email: email},
-        ),
-        returnValue: _FakeConfigurationBase_5(
-          this,
-          Invocation.method(
-            #getResetPasswordRoute,
-            [],
-            {#email: email},
-          ),
-        ),
-      ) as _i5.ConfigurationBase);
-
-  @override
-  bool isPublicOnlyRoute(_i5.ConfigurationBase? config) => (super.noSuchMethod(
-        Invocation.method(
-          #isPublicOnlyRoute,
-          [config],
-        ),
-        returnValue: false,
-      ) as bool);
-
-  @override
-  bool isLogoutRoute(_i5.ConfigurationBase? config) => (super.noSuchMethod(
-        Invocation.method(
-          #isLogoutRoute,
-          [config],
-        ),
-        returnValue: false,
-      ) as bool);
-
-  @override
-  _i5.ConfigurationBase? resolveAppSpecificAuthState(
-    _i7.AsyncResult<_i6.User>? authState,
-    _i5.ConfigurationBase? navRequest,
-  ) =>
-      (super.noSuchMethod(Invocation.method(
-        #resolveAppSpecificAuthState,
-        [
-          authState,
-          navRequest,
-        ],
-      )) as _i5.ConfigurationBase?);
 
   @override
   _i5.ConfigurationBase getPostLoginDefaultRoute() => (super.noSuchMethod(
@@ -848,14 +792,19 @@ class MockAppCoordinatorDelegate extends _i1.Mock
       ) as _i5.ConfigurationBase);
 
   @override
-  bool isAuthCallbackRoute(_i5.ConfigurationBase? config) =>
-      (super.noSuchMethod(
+  _i5.ConfigurationBase getLoginRoute() => (super.noSuchMethod(
         Invocation.method(
-          #isAuthCallbackRoute,
-          [config],
+          #getLoginRoute,
+          [],
         ),
-        returnValue: false,
-      ) as bool);
+        returnValue: _FakeConfigurationBase_5(
+          this,
+          Invocation.method(
+            #getLoginRoute,
+            [],
+          ),
+        ),
+      ) as _i5.ConfigurationBase);
 }
 
 /// A class which mocks [Controller].

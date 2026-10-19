@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_injector/auto_injector.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,34 @@ import 'package:provider/provider.dart';
 import 'controller.dart';
 import 'default_pages.dart';
 import 'router.dart';
+
+/// Who may see a destination.
+enum RouteAccess { public, guestOnly, protected }
+
+/// The answer of a [RouteGuard]: [GuardResult.allow] or
+/// [GuardResult.redirect].
+sealed class GuardResult {
+  const GuardResult._();
+
+  const factory GuardResult.allow() = GuardAllow;
+  const factory GuardResult.redirect(ConfigurationBase route) = GuardRedirect;
+}
+
+final class GuardAllow extends GuardResult {
+  const GuardAllow() : super._();
+}
+
+final class GuardRedirect extends GuardResult {
+  const GuardRedirect(this.route) : super._();
+
+  final ConfigurationBase route;
+}
+
+/// App policy (roles, data policy, ...). Gets its services from its own
+/// constructor; it is not given the auth state.
+abstract interface class RouteGuard {
+  FutureOr<GuardResult> check(ConfigurationBase route);
+}
 
 /// One destination: its path template, how to parse its route from a URL, and
 /// how to build its controller and page.
@@ -14,6 +44,8 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
     required this.parse,
     required this.controller,
     required this.page,
+    this.access = RouteAccess.protected,
+    this.transient = false,
   });
 
   /// R's `static const path`, e.g. `CaseRoute.path`.
@@ -27,6 +59,11 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
 
   /// The view, which reads its controller from Provider.
   final Widget page;
+
+  final RouteAccess access;
+
+  /// Never kept as the "last base" in NavigationService.
+  final bool transient;
 
   Type get routeType => R;
 
@@ -96,6 +133,11 @@ class RouteTable {
       }
     }
     return NotFoundRoute(uri.toString());
+  }
+
+  /// The binding's transient flag; false for a route type with no binding.
+  bool isTransient(ConfigurationBase route) {
+    throw UnimplementedError('not implemented');
   }
 
   /// The binding whose route type is route.runtimeType. Throws StateError

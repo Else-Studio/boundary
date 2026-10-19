@@ -49,13 +49,11 @@ class FakeProtectedRoute extends ConfigurationBase {
   const FakeProtectedRoute();
 
   @override
-  bool get protected => true;
-  @override
   String get pathTemplate => '/protected';
 }
 
 class FakeLoginRoute extends ConfigurationBase {
-  const FakeLoginRoute() : super(isProtected: false);
+  const FakeLoginRoute();
 
   @override
   String get pathTemplate => '/login';
@@ -105,12 +103,14 @@ void main() {
         parse: (_) => const FakeProtectedRoute(),
         controller: (_) => LoginController(),
         page: const SizedBox(),
+        access: RouteAccess.protected,
       ),
       RouteBinding<FakeLoginRoute, LoginController>(
         path: '/login',
         parse: (_) => const FakeLoginRoute(),
         controller: (_) => LoginController(),
         page: const SizedBox(),
+        access: RouteAccess.guestOnly,
       ),
     ];
 

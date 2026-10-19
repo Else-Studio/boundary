@@ -34,8 +34,7 @@ class NoSessionStored extends AuthError {
 }
 
 class LoggedOut extends AuthError {
-  final String? emailForResetPassword;
-  const LoggedOut({this.emailForResetPassword});
+  const LoggedOut();
 }
 
 class SessionExpired extends AuthError {
@@ -98,7 +97,7 @@ abstract class AuthService {
   });
   Future<void> redirected(Map<String, String> parameters);
   Future<Uri> getLogoutUrl();
-  Future<void> confirmLocalLogout({bool resetPassword = false});
+  Future<void> confirmLocalLogout();
   void clearLoggedOutStateAndPrepareForPolicyCheck();
   void setPendingVerificationInfo(RegisteredUserInfo info); // ADD THIS
   void clearPendingVerificationInfo(); // ADD THIS
@@ -382,15 +381,10 @@ abstract class BaseAuthService implements AuthService {
   }
 
   @override
-  Future<void> confirmLocalLogout({bool resetPassword = false}) async {
-    final previousEmail = _userEmail;
+  Future<void> confirmLocalLogout() async {
     await _clearCredentials();
     _client = null;
-    _user$.add(
-      Failure(
-        LoggedOut(emailForResetPassword: resetPassword ? previousEmail : null),
-      ),
-    );
+    _user$.add(const Failure(LoggedOut()));
   }
 
   @override

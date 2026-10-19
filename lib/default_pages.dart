@@ -95,6 +95,7 @@ final RouteBinding<ErrorRoute, DefaultPageController> defaultErrorRouteBinding =
   ),
   controller: (i) => DefaultPageController(i.get<NavigationService>()),
   page: const DefaultErrorPage(),
+  access: RouteAccess.public,
 );
 
 final RouteBinding<NotFoundRoute, DefaultPageController>
@@ -104,4 +105,5 @@ final RouteBinding<NotFoundRoute, DefaultPageController>
   parse: (p) => const NotFoundRoute(NotFoundRoute.path),
   controller: (i) => DefaultPageController(i.get<NavigationService>()),
   page: const DefaultNotFoundPage(),
+  access: RouteAccess.public,
 );

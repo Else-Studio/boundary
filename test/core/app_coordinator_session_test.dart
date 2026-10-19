@@ -3,12 +3,11 @@
 // group: 'Unauthenticated User Scenarios'
 //   - test: should allow navigation to an unprotected route
 //   - test: should store redirect and navigate to login when a protected route is requested
-//   - test: should navigate to login page when auth state is LoggedOut without a reset email
-//   - test: should navigate to reset password page when auth state is LoggedOut with a reset email
+//   - test: should navigate to login when logged out on a protected route
 //
 // group: 'Authenticated User Scenarios'
 //   - test: should allow navigation to a standard protected route
-//   - test: should redirect to the post-login default route when a public-only route (e.g., login) is requested
+//   - test: should redirect to the post-login default route when a guest-only route (e.g., login) is requested
 //   - test: should redirect to the post-auth URL after a successful login
 //   - test: should navigate to post-login default route when the root path is requested
 //   - test: should allow navigation to the logout route
@@ -30,35 +29,20 @@ import '../helpers/sut_factory.dart';
 // Fakes for type-safe route comparison
 class FakeUnprotectedRoute extends ConfigurationBase {
   @override
-  bool get protected => false;
-  @override
   String get pathTemplate => '/unprotected';
 }
 
 class FakeProtectedRoute extends ConfigurationBase {
-  @override
-  bool get protected => true;
   @override
   String get pathTemplate => '/protected';
 }
 
 class FakeLoginRoute extends ConfigurationBase {
   @override
-  bool get protected => false;
-  @override
   String get pathTemplate => '/login';
 }
 
-class FakeResetPasswordRoute extends ConfigurationBase {
-  @override
-  bool get protected => false;
-  @override
-  String get pathTemplate => '/reset-password';
-}
-
 class FakePostLoginDefaultRoute extends ConfigurationBase {
-  @override
-  bool get protected => true;
   @override
   String get pathTemplate => '/home';
 }
@@ -72,8 +56,6 @@ class FakeRootRoute extends ConfigurationBase {
 
 class FakeLogoutRoute extends ConfigurationBase {
   @override
-  bool get protected => true;
-  @override
   String get pathTemplate => '/logout';
 }
 
@@ -83,28 +65,31 @@ void main() {
 
     RouteBinding<R, MockController> bind<R extends ConfigurationBase>(
       String path,
-      R Function() route,
-    ) =>
+      R Function() route, {
+      RouteAccess access = RouteAccess.protected,
+    }) =>
         RouteBinding<R, MockController>(
           path: path,
           parse: (_) => route(),
           controller: (_) => provider.mockController,
           page: const SizedBox(),
+          access: access,
         );
 
     setUp(() async {
       provider = MockDependencyProvider();
       await SutFactory.initTestBed(provider: provider);
       when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
-        bind<FakeUnprotectedRoute>('/unprotected', FakeUnprotectedRoute.new),
+        bind<FakeUnprotectedRoute>('/unprotected', FakeUnprotectedRoute.new,
+            access: RouteAccess.public),
         bind<FakeProtectedRoute>('/protected', FakeProtectedRoute.new),
-        bind<FakeLoginRoute>('/login', FakeLoginRoute.new),
-        bind<FakeResetPasswordRoute>(
-            '/reset-password', FakeResetPasswordRoute.new),
+        bind<FakeLoginRoute>('/login', FakeLoginRoute.new,
+            access: RouteAccess.guestOnly),
         bind<FakePostLoginDefaultRoute>(
             '/home', FakePostLoginDefaultRoute.new),
         bind<FakeRootRoute>('/', FakeRootRoute.new),
-        bind<FakeLogoutRoute>('/logout', FakeLogoutRoute.new),
+        bind<FakeLogoutRoute>('/logout', FakeLogoutRoute.new,
+            access: RouteAccess.public),
       ]);
     });
 
@@ -165,7 +150,7 @@ void main() {
       );
 
       test(
-        'should navigate to login page when auth state is LoggedOut without a reset email',
+        'should navigate to login when logged out on a protected route',
         () async {
           // Arrange
           final loginRoute = FakeLoginRoute();
@@ -190,36 +175,6 @@ void main() {
               .called(1);
         },
       );
-
-      test(
-        'should navigate to reset password page when auth state is LoggedOut with a reset email',
-        () async {
-          // Arrange
-          const testEmail = 'test@example.com';
-          final resetPasswordRoute = FakeResetPasswordRoute();
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(
-                const Failure(LoggedOut(emailForResetPassword: testEmail))),
-          );
-          when(provider.mockNavigationService.routeRequestStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(FakeProtectedRoute()),
-          );
-          when(provider.mockAppCoordinatorDelegate
-                  .getResetPasswordRoute(email: testEmail))
-              .thenReturn(resetPasswordRoute);
-
-          // Act
-          SutFactory.createAppCoordinator(provider: provider);
-          await Future.delayed(Duration.zero);
-
-          // Assert
-          verify(provider.mockAuthService
-                  .clearLoggedOutStateAndPrepareForPolicyCheck())
-              .called(1);
-          verify(provider.mockNavigationService.navigateTo(resetPasswordRoute))
-              .called(1);
-        },
-      );
     });
 
     group('Authenticated User Scenarios', () {
@@ -236,8 +191,6 @@ void main() {
           );
           when(provider.mockNavigationService.consumePostAuthRedirect())
               .thenAnswer((_) async => null);
-          when(provider.mockAppCoordinatorDelegate.isPublicOnlyRoute(any))
-              .thenReturn(false);
 
           // Act
           final coordinator =
@@ -250,7 +203,7 @@ void main() {
       );
 
       test(
-        'should redirect to the post-login default route when a public-only route is requested',
+        'should redirect to the post-login default route when a guest-only route is requested',
         () async {
           // Arrange
           final loginRoute = FakeLoginRoute();
@@ -261,9 +214,6 @@ void main() {
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(loginRoute),
           );
-          when(provider.mockAppCoordinatorDelegate
-                  .isPublicOnlyRoute(loginRoute))
-              .thenReturn(true);
           when(provider.mockAppCoordinatorDelegate.getPostLoginDefaultRoute())
               .thenReturn(defaultRoute);
 
@@ -356,8 +306,6 @@ void main() {
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(logoutRoute),
           );
-          when(provider.mockAppCoordinatorDelegate.isLogoutRoute(logoutRoute))
-              .thenReturn(true);
 
           // Act
           final coordinator =

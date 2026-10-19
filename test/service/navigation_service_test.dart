@@ -39,14 +39,43 @@ class _NoopController extends Controller<void> {
 
 RouteBinding<R, _NoopController> _bind<R extends ConfigurationBase>(
   String path,
-  R Function(Map<String, String>) parse,
-) =>
+  R Function(Map<String, String>) parse, {
+  RouteAccess access = RouteAccess.protected,
+  bool transient = false,
+}) =>
     RouteBinding<R, _NoopController>(
       path: path,
       parse: parse,
       controller: (_) => _NoopController(),
       page: const SizedBox(),
+      access: access,
+      transient: transient,
     );
+
+class _AboutRoute extends ConfigurationBase {
+  static const String path = '/about';
+
+  const _AboutRoute();
+
+  @override
+  String get pathTemplate => path;
+}
+
+class _GuestRoute extends ConfigurationBase {
+  static const String path = '/login';
+
+  const _GuestRoute();
+
+  @override
+  String get pathTemplate => path;
+}
+
+class _UnboundRoute extends ConfigurationBase {
+  const _UnboundRoute();
+
+  @override
+  String get pathTemplate => '/unbound';
+}
 
 class _NoteModalRoute extends ConfigurationBase {
   static const String path = '/notes/:id';
@@ -70,7 +99,11 @@ final _caseBinding = _bind<_CaseRoute>(
 RouteTable _routes() => RouteTable([
       _bind<_TestRoute>('/base', (_) => const _TestRoute('/base')),
       _bind<_TestCallbackRoute>(
-          '/callback', (_) => const _TestCallbackRoute()),
+        '/callback',
+        (_) => const _TestCallbackRoute(),
+        access: RouteAccess.public,
+        transient: true,
+      ),
     ]);
 
 class _TestDelegate implements NavigationServiceDelegate {
@@ -80,10 +113,6 @@ class _TestDelegate implements NavigationServiceDelegate {
 
   @override
   ConfigurationBase getLoginRoute() => loginRoute;
-
-  @override
-  bool isAuthCallbackRoute(ConfigurationBase config) =>
-      config is _TestCallbackRoute;
 
   @override
   ConfigurationBase getPostLoginDefaultRoute() => const _TestRoute('/home');
@@ -111,30 +140,57 @@ void main() {
     expect(fallbackService.currentRequestedConfiguration, same(login));
     fallbackService.dispose();
   });
-  test('does not retain auth callback as navigation history', () {
-    const login = _TestRoute('/login');
-    const base = _TestRoute('/base');
+  test('a transient route is not kept as navigation history', () {
+    const guest = _GuestRoute();
+    const about = _AboutRoute();
     const callback = _TestCallbackRoute();
+    RouteTable table() => RouteTable([
+          _bind<_AboutRoute>(_AboutRoute.path, (_) => about,
+              access: RouteAccess.public),
+          _bind<_TestCallbackRoute>('/callback', (_) => callback,
+              access: RouteAccess.public, transient: true),
+          _bind<_GuestRoute>(_GuestRoute.path, (_) => guest,
+              access: RouteAccess.guestOnly),
+        ]);
 
     final service = NavigationService(
-      delegate: const _TestDelegate(login),
-      routes: _routes(),
+      delegate: const _TestDelegate(guest),
+      routes: table(),
     );
-    service.navigateTo(base);
+    service.navigateTo(about);
     service.navigateTo(callback);
     service.navigateBackOrLogin();
 
-    expect(service.currentRequestedConfiguration, same(base));
+    expect(service.currentRequestedConfiguration, same(about));
     service.dispose();
 
     final callbackOnlyService = NavigationService(
-      delegate: const _TestDelegate(login),
-      routes: _routes(),
+      delegate: const _TestDelegate(guest),
+      routes: table(),
     );
     callbackOnlyService.syncBaseConfiguration(callback);
     callbackOnlyService.navigateBackOrLogin();
-    expect(callbackOnlyService.currentRequestedConfiguration, same(login));
+    expect(callbackOnlyService.currentRequestedConfiguration, same(guest));
     callbackOnlyService.dispose();
+  });
+
+  test('a route with no binding is not transient and does not throw', () {
+    const unbound = _UnboundRoute();
+    const callback = _TestCallbackRoute();
+
+    final service = NavigationService(
+      delegate: const _TestDelegate(_GuestRoute()),
+      routes: RouteTable([
+        _bind<_TestCallbackRoute>('/callback', (_) => callback,
+            access: RouteAccess.public, transient: true),
+      ]),
+    );
+    service.navigateTo(unbound);
+    service.navigateTo(callback);
+    service.navigateBackOrLogin();
+
+    expect(service.currentRequestedConfiguration, same(unbound));
+    service.dispose();
   });
 
   group('stored post-auth redirect', () {

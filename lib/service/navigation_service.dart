@@ -153,9 +153,7 @@ class NavigationService {
   /// This is used during deep-linking when the AppCoordinator scaffolds a background
   /// route that wasn't explicitly requested through the NavigationService.
   void syncBaseConfiguration(ConfigurationBase configuration) {
-    if (configuration.isModal ||
-        configuration is ErrorRoute ||
-        _delegate.isAuthCallbackRoute(configuration)) {
+    if (configuration.isModal || configuration is ErrorRoute || false) {
       return;
     }
     if (_lastBaseConfiguration != configuration) {
@@ -186,8 +184,7 @@ class NavigationService {
     // Only navigate back to the previous base if it is known and not a
     // callback. Callback routes can be deep-linked with an unauthorized
     // session.
-    if (_lastBaseConfiguration != null &&
-        !_delegate.isAuthCallbackRoute(_lastBaseConfiguration!)) {
+    if (_lastBaseConfiguration != null && !false) {
       _logger.info(
         "Requesting navigation back to last base route: ${_lastBaseConfiguration!.runtimeType}",
       );
@@ -207,7 +204,7 @@ class NavigationService {
 
     bool isModalRoute = configuration.isModal;
     bool isErrorRoute = configuration is ErrorRoute;
-    bool isAuthCallbackRoute = _delegate.isAuthCallbackRoute(configuration);
+    bool isAuthCallbackRoute = false;
 
     if (!isModalRoute && !isErrorRoute && !isAuthCallbackRoute) {
       if (_lastBaseConfiguration != configuration) {
