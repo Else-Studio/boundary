@@ -9,6 +9,7 @@ void main() {
 
   group('useLogger', () {
     test('applies a log level set after the logger was created', () {
+      boundaryLogLevel = LogLevel.verbose;
       final log = useLogger('Test', quiet: false);
       boundaryLogLevel = LogLevel.warning;
 
