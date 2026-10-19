@@ -37,8 +37,7 @@ abstract class ConfigurationBase {
   Map<String, String> get params => const {};
 
   /// Built by [buildRouteUri] from [pathTemplate] and [params]. May be overridden.
-  // Stub: the real implementation is `buildRouteUri(pathTemplate, params)`.
-  Uri get uri => Uri.parse(pathTemplate);
+  Uri get uri => buildRouteUri(pathTemplate, params);
 
   /// Getter to access the protection status of the route.
   bool get protected => isProtected;
@@ -46,6 +45,17 @@ abstract class ConfigurationBase {
   /// Optional: Defines a default base route to be used if this route is a modal
   /// and is accessed directly (deep-linked) without an existing base context.
   ConfigurationBase? get defaultBaseRoute => null;
+
+  /// Same runtimeType and equal [uri].
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConfigurationBase &&
+          other.runtimeType == runtimeType &&
+          other.uri == uri);
+
+  @override
+  int get hashCode => Object.hash(runtimeType, uri);
 }
 
 // --- Part 2: Core Routes ---
@@ -61,6 +71,16 @@ class NotFoundRoute extends ConfigurationBase {
 
   @override
   String get pathTemplate => path;
+
+  /// Also compares [originalUrl], which is not in the URI.
+  @override
+  bool operator ==(Object other) =>
+      super == other &&
+      other is NotFoundRoute &&
+      other.originalUrl == originalUrl;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, originalUrl);
 }
 
 /// A generic route for displaying critical, often unrecoverable, errors.
@@ -87,14 +107,13 @@ class ErrorRoute extends ConfigurationBase {
         'isSessionTermination': isSessionTermination.toString(),
       };
 
+  /// Also compares [problem], which is not in the URI.
   @override
-  Uri get uri => Uri(
-        path: path,
-        queryParameters: {
-          'message': message,
-          'isSessionTermination': isSessionTermination.toString(),
-        },
-      );
+  bool operator ==(Object other) =>
+      super == other && other is ErrorRoute && other.problem == problem;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, problem);
 }
 
 // --- Part 3: Route Utilities (Core) ---
@@ -103,7 +122,26 @@ class ErrorRoute extends ConfigurationBase {
 /// the remaining params in the query. No remaining params: no '?'.
 /// A `:name` with no value in params throws ArgumentError.
 Uri buildRouteUri(String pathTemplate, Map<String, String> params) {
-  throw UnimplementedError('not implemented');
+  final used = <String>{};
+  final filled = pathTemplate.split('/').map((segment) {
+    if (!segment.startsWith(':')) return segment;
+    final name = segment.substring(1);
+    final value = params[name];
+    if (value == null) {
+      throw ArgumentError.value(
+        params,
+        'params',
+        'No value for ":$name" in "$pathTemplate"',
+      );
+    }
+    used.add(name);
+    return Uri.encodeComponent(value);
+  }).join('/');
+  final rest = {
+    for (final entry in params.entries)
+      if (!used.contains(entry.key)) entry.key: entry.value,
+  };
+  return Uri(path: filled, queryParameters: rest.isEmpty ? null : rest);
 }
 
 /// Helper function to convert path templates (e.g., '/users/:id') into
@@ -131,8 +169,7 @@ class AppRouteInformationParser
   AppRouteInformationParser(this.routes);
 
   /// This is triggered by the OS (e.g., deep link, browser back/forth, URL changes).
-  /// It matches the path against the application-provided `routeMap` to create
-  /// the correct configuration object.
+  /// It parses the URL with the [RouteTable] to create the configuration object.
   @override
   Future<ConfigurationBase> parseRouteInformation(
     RouteInformation routeInformation,

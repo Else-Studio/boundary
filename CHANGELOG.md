@@ -14,6 +14,13 @@
 *   `Controller.emit(target, value)` adds to a stream controller unless the controller is disposed or the target is closed.
 *   `Controller.isDisposed` is public, and `Controller.dispose()` is idempotent.
 *   `Controller.addSubscription` is removed; use `own`.
+*   `ConfigurationBase` routes compare by `runtimeType` and `uri`; `NotFoundRoute` also compares `originalUrl` and `ErrorRoute` also compares `problem`.
+*   `ConfigurationBase.pathTemplate` (abstract) and `params` are new; `uri` is built from them and may still be overridden.
+*   `buildRouteUri(pathTemplate, params)` fills `:name` segments (encoded) and puts the other params in the query.
+*   `RouteBinding<R, C>` records one destination: `path`, `parse`, `controller` and `page`.
+*   `RouteTable(bindings)` parses a URL into a route (a parse that throws gives `NotFoundRoute`) and finds a route's binding with `bindingFor`.
+*   `AppRouteInformationParser(RouteTable)` replaces `AppRouteInformationParser({routeMap, defaultRoute})`.
+*   Removed: `ConfigurationBuilder`, `AppRouteInformationParser.parseUri`, `NotFoundRoute.create`, `ErrorRoute.create`; the static `pathTemplate` on `NotFoundRoute` and `ErrorRoute` is now `path`.
 
 ## 0.4.1
 
