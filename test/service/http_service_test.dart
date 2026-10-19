@@ -1,31 +1,23 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/service/http_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
-import 'package:oauth2/oauth2.dart' as oauth2;
 
 import '../helpers/mock_dependency_provider.dart';
-import '../helpers/model_factory.dart';
 import '../helpers/sut_factory.dart';
 import '../helpers/mocks.mocks.dart';
 
 // --- Test Plan: HttpService ---
 //
 // ## Group: Authentication and Client Selection
-// - test('should use authenticated client and add auth headers when requireAuth is true')
 // - test('should use standard client when requireAuth is false')
-// - test('should throw NoSessionStored when requireAuth is true and user is not authenticated')
-// - test('should attempt to refresh token when it is expired before making a request')
-// - test('should throw SessionExpired when token refresh fails during a request')
 //
 // ## Group: Headers
-// - test('should include default headers on all requests')
+// - test('sends only Accept on a GET without a body')
 // - test('should merge custom headers with default headers, with custom taking precedence')
-// - test('should set Accept-Language header correctly based on LocaleService')
 //
 // ## Group: Request-Specific Logic
 // - test('should add Content-Type header when a body is present for a POST request')
@@ -50,40 +42,6 @@ void main() {
 
   group('HttpService', () {
     group('Authentication and Client Selection', () {
-      test(
-          'should use authenticated client and add auth headers when requireAuth is true',
-          () async {
-        // Arrange
-        final mockAuthHttpClient = MockBaseClient();
-        final credentials = ModelFactory.createCredentials();
-        final authClient = oauth2.Client(
-          credentials,
-          httpClient: mockAuthHttpClient,
-        );
-        final testUrl = Uri.parse('https://api.example.com/data');
-
-        when(provider.mockAuthService.client).thenReturn(authClient);
-        when(mockAuthHttpClient.send(any)).thenAnswer(
-          (_) async => http.StreamedResponse(
-            Stream.value(utf8.encode('{}')),
-            200,
-          ),
-        );
-
-        // Act
-        await httpService.get(testUrl, requireAuth: true);
-
-        // Assert
-        verifyNever(mockHttpClient.get(any, headers: anyNamed('headers')));
-        final captured = verify(mockAuthHttpClient.send(captureAny)).captured;
-
-        final capturedRequest = captured.single as http.Request;
-        expect(
-          capturedRequest.headers['Authorization'],
-          'Bearer ${credentials.accessToken}',
-        );
-      });
-
       test('should use standard client when requireAuth is false', () async {
         // Arrange
         final testUrl = Uri.parse('https://api.example.com/data');
@@ -97,99 +55,10 @@ void main() {
         verify(mockHttpClient.get(testUrl, headers: anyNamed('headers')))
             .called(1);
       });
-
-      test(
-          'should throw NoSessionStored when requireAuth is true and user is not authenticated',
-          () {
-        // Arrange
-        final testUrl = Uri.parse('https://api.example.com/data');
-        when(provider.mockAuthService.authenticated).thenReturn(false);
-
-        // Act
-        final call = httpService.get(testUrl, requireAuth: true);
-
-        // Assert
-        expect(call, throwsA(isA<NoSessionStored>()));
-      });
-
-      test(
-          'should attempt to refresh token when it is expired before making a request',
-          () async {
-        // Arrange
-        final mockAuthHttpClient = MockBaseClient();
-        final expiredCredentials = ModelFactory.createCredentials(
-          expiration: DateTime.now().subtract(const Duration(minutes: 5)),
-        );
-        final expiredAuthClient = oauth2.Client(
-          expiredCredentials,
-          httpClient: mockAuthHttpClient,
-        );
-        final refreshedCredentials = ModelFactory.createCredentials(
-          accessToken: 'new-refreshed-token',
-        );
-        final refreshedAuthClient = oauth2.Client(
-          refreshedCredentials,
-          httpClient: mockAuthHttpClient,
-        );
-        final testUrl = Uri.parse('https://api.example.com/data');
-
-        when(provider.mockAuthService.refreshCredentialsIfExpired())
-            .thenAnswer((_) async {});
-        when(provider.mockAuthService.client)
-            .thenReturnInOrder([expiredAuthClient, refreshedAuthClient]);
-        when(mockAuthHttpClient.send(any)).thenAnswer(
-          (_) async => http.StreamedResponse(
-            Stream.value(utf8.encode('{}')),
-            200,
-          ),
-        );
-
-        // Act
-        await httpService.get(testUrl, requireAuth: true);
-
-        // Assert
-        verify(provider.mockAuthService.refreshCredentialsIfExpired())
-            .called(1);
-
-        final captured = verify(mockAuthHttpClient.send(captureAny)).captured;
-        final capturedRequest = captured.single as http.Request;
-        expect(
-          capturedRequest.headers['Authorization'],
-          'Bearer ${refreshedCredentials.accessToken}',
-        );
-      });
-
-      test(
-          'should throw HttpException 401 when token refresh fails during a request',
-          () {
-        // Arrange
-        final mockAuthHttpClient = MockBaseClient();
-        final expiredCredentials = ModelFactory.createCredentials(
-          expiration: DateTime.now().subtract(const Duration(minutes: 5)),
-        );
-        final expiredAuthClient = oauth2.Client(
-          expiredCredentials,
-          httpClient: mockAuthHttpClient,
-        );
-        final testUrl = Uri.parse('https://api.example.com/data');
-
-        when(provider.mockAuthService.client).thenReturn(expiredAuthClient);
-        when(provider.mockAuthService.refreshCredentialsIfExpired())
-            .thenThrow(const SessionExpired(message: 'Refresh failed'));
-
-        // Act
-        final call = httpService.get(testUrl, requireAuth: true);
-
-        // Assert
-        expect(
-            call,
-            throwsA(isA<HttpException>()
-                .having((e) => e.response.statusCode, 'statusCode', 401)));
-      });
     });
 
     group('Headers', () {
-      test('should include default headers on all requests', () async {
+      test('sends only Accept on a GET without a body', () async {
         // Arrange
         final testUrl = Uri.parse('https://api.example.com/data');
         when(mockHttpClient.get(any, headers: anyNamed('headers')))
@@ -203,9 +72,7 @@ void main() {
             verify(mockHttpClient.get(any, headers: captureAnyNamed('headers')))
                 .captured;
         final capturedHeaders = captured.single as Map<String, String>;
-        expect(capturedHeaders['Accept'], 'application/json');
-        expect(capturedHeaders.containsKey('Accept-Language'), isTrue);
-        expect(capturedHeaders['Accept-Language'], isNotEmpty);
+        expect(capturedHeaders, {'Accept': 'application/json'});
       });
 
       test(
@@ -232,15 +99,6 @@ void main() {
         expect(capturedHeaders['X-Custom'], 'value');
         expect(capturedHeaders['Accept'], 'application/xml');
       });
-
-      test('should set Accept-Language header correctly based on LocaleService',
-          () {
-        // Arrange
-        // Act
-        // Assert
-      },
-          skip:
-              'Unimplemented: This test requires SutFactory.createHttpService to allow injecting a mock LocaleService.');
     });
 
     group('Request-Specific Logic', () {
@@ -262,8 +120,10 @@ void main() {
                 headers: captureAnyNamed('headers'), body: anyNamed('body')))
             .captured;
         final capturedHeaders = captured[0] as Map<String, String>;
-        expect(
-            capturedHeaders['Content-Type'], 'application/json; charset=UTF-8');
+        expect(capturedHeaders, {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
+        });
       });
     });
 

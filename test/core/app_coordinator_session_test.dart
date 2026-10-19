@@ -91,7 +91,7 @@ void main() {
           final unprotectedRoute = FakeUnprotectedRoute();
 
           when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(const Error(NoSessionStored())),
+            (_) => BehaviorSubject.seeded(const Failure(NoSessionStored())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(unprotectedRoute),
@@ -118,7 +118,7 @@ void main() {
           final loginRoute = FakeLoginRoute();
 
           when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(const Error(NoSessionStored())),
+            (_) => BehaviorSubject.seeded(const Failure(NoSessionStored())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(protectedRoute),
@@ -145,7 +145,7 @@ void main() {
           // Arrange
           final loginRoute = FakeLoginRoute();
           when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(const Error(LoggedOut())),
+            (_) => BehaviorSubject.seeded(const Failure(LoggedOut())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(FakeProtectedRoute()),
@@ -174,7 +174,7 @@ void main() {
           final resetPasswordRoute = FakeResetPasswordRoute();
           when(provider.mockAuthService.userStream).thenAnswer(
             (_) => BehaviorSubject.seeded(
-                const Error(LoggedOut(emailForResetPassword: testEmail))),
+                const Failure(LoggedOut(emailForResetPassword: testEmail))),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(FakeProtectedRoute()),
@@ -275,7 +275,7 @@ void main() {
           // 1. Create the coordinator and push the initial unauthenticated state
           final coordinator =
               SutFactory.createAppCoordinator(provider: provider);
-          authStreamController.add(const Error(NoSessionStored()));
+          authStreamController.add(const Failure(NoSessionStored()));
           navStreamController.add(protectedRoute);
 
           // Wait for the first reconciliation (user is sent to login)

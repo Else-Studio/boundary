@@ -2,11 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:talker/talker.dart';
 
+export 'package:talker/talker.dart' show LogLevel;
+
 // Configuration for Talker logger colors in light mode.
 Map<String, AnsiPen> _talkerLight = {
   TalkerKey.verbose: AnsiPen()..white(),
   TalkerKey.debug: AnsiPen()..green(),
 };
+
+/// Lowest level every useLogger logger prints. Read each time a message is
+/// logged, so it applies to loggers created earlier.
+LogLevel boundaryLogLevel = LogLevel.verbose;
 
 // Filter to suppress verbose and debug messages from Talker logs.
 class _Quiet extends TalkerFilter {
@@ -109,6 +115,13 @@ class Loading<T> extends AsyncResult<T> {
 class Data<T> extends AsyncResult<T> {
   final T data;
   const Data(this.data);
+}
+
+class Failure<T> extends AsyncResult<T> {
+  final Object error;
+  final String? messageKey;
+  final StackTrace? stackTrace;
+  const Failure(this.error, {this.stackTrace, this.messageKey});
 }
 
 class Error<T> extends AsyncResult<T> {

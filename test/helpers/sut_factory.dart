@@ -43,14 +43,13 @@ class SutFactory {
 
   /// Creates an [HttpService] instance with its dependencies resolved.
   ///
-  /// By default, it uses a mock [AuthService] and a real [LocaleService].
+  /// By default, it uses a mock [AuthService].
   /// A custom [MockDependencyProvider] can be passed in to override
   /// the default mock behavior for specific test cases.
   static HttpService createHttpService({MockDependencyProvider? provider}) {
     final effectiveProvider = provider ?? MockDependencyProvider();
     return HttpService(
       effectiveProvider.mockAuthService,
-      createLocaleService(), // Use the factory to create the real service
       effectiveProvider.mockHttpClient,
     );
   }

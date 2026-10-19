@@ -8,7 +8,6 @@ import 'package:oauth2/oauth2.dart' as oauth2;
 import '../model/error_models.dart';
 import '../utils.dart';
 import 'auth_service.dart';
-import 'locale_service.dart';
 
 /// An exception representing a failed HTTP request.
 /// It holds the raw [http.Response] to allow upstream services to inspect
@@ -46,7 +45,6 @@ class ClientNetworkException implements Exception {
 /// transient errors like rate limiting (HTTP 429).
 class HttpService {
   final AuthService _authService;
-  final LocaleService _localeService;
   final http.BaseClient _standardClient;
 
   final _logger = useLogger('Http');
@@ -56,7 +54,7 @@ class HttpService {
   static const int _maxRetries = 3;
   static const Duration _baseRetryDelay = Duration(seconds: 2);
 
-  HttpService(this._authService, this._localeService, this._standardClient);
+  HttpService(this._authService, this._standardClient);
 
   Future<oauth2.Client> _getAuthenticatedClient() async {
     try {
@@ -126,7 +124,6 @@ class HttpService {
       if (body != null && customHeaders?['Content-Type'] == null)
         'Content-Type': 'application/json; charset=UTF-8',
       if (customHeaders?['Accept'] == null) 'Accept': 'application/json',
-      'Accept-Language': _localeService.currentLocale.languageCode,
       ...?customHeaders,
     };
   }
@@ -147,8 +144,11 @@ class HttpService {
         final response = await requestBuilder(client).timeout(_requestTimeout);
 
         // Isolate 401 handling from standard 429/network retries
-        if (response.statusCode == 401 && requireAuth && !hasAttemptedAuthRefresh) {
-          _logger.warning('Received 401 for $url. Attempting forced token refresh...');
+        if (response.statusCode == 401 &&
+            requireAuth &&
+            !hasAttemptedAuthRefresh) {
+          _logger.warning(
+              'Received 401 for $url. Attempting forced token refresh...');
           hasAttemptedAuthRefresh = true;
           try {
             await _authService.forceRefresh();
@@ -157,7 +157,8 @@ class HttpService {
           } on AuthError catch (e) {
             _logger.error('Session refresh failed after 401: ${e.message}');
             // Catch fatal refresh failures and wrap as 401 to trigger ApiErrorHandler logout
-            throw HttpException(http.Response('Session refresh failed: ${e.message}', 401));
+            throw HttpException(
+                http.Response('Session refresh failed: ${e.message}', 401));
           }
         }
 
@@ -336,11 +337,10 @@ class HttpService {
 
     return _sendRequest(
       (client) async {
-        final request =
-            http.MultipartRequest('POST', url)
-              ..headers.addAll(effectiveHeaders)
-              ..fields.addAll(fields ?? {})
-              ..files.addAll(files);
+        final request = http.MultipartRequest('POST', url)
+          ..headers.addAll(effectiveHeaders)
+          ..fields.addAll(fields ?? {})
+          ..files.addAll(files);
 
         final streamed = await client.send(request).timeout(_requestTimeout);
         return http.Response.fromStream(streamed);

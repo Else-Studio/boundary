@@ -244,7 +244,7 @@ void main() {
         () async {
           // Arrange
           authStreamController
-              .add(const Error(TokenVerificationFailed(message: 'test')));
+              .add(const Failure(TokenVerificationFailed(message: 'test')));
 
           // Act
           final coordinator =
@@ -253,7 +253,10 @@ void main() {
           await Future.delayed(Duration.zero);
 
           // Assert
-          expect(coordinator.baseConfiguration, isA<ErrorRoute>());
+          final route = coordinator.baseConfiguration;
+          expect(route, isA<ErrorRoute>());
+          expect((route as ErrorRoute).isSessionTermination, isTrue);
+          expect(route.message, 'error.session.unexpected');
         },
       );
 
