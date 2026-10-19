@@ -236,22 +236,15 @@ class CoreRouterDelegate extends RouterDelegate<ConfigurationBase>
     return Navigator(
       key: navigatorKey,
       pages: _buildPages(context),
-      // ignore: deprecated_member_use
-      onPopPage: (route, result) {
-        if (!route.didPop(result)) {
-          return false;
-        }
-
-        // If a modal page was popped, dismiss it using our centralized logic.
-        if (route.settings is TransparentModalPage) {
+      onDidRemovePage: (page) {
+        // A modal page removed by system back: dismiss it through the
+        // centralized logic. The coordinator state change rebuilds the pages.
+        if (page is TransparentModalPage) {
           _logger.debug(
-            'Modal page popped via onPopPage. Dismissing via NavigationService.',
+            'Modal page removed. Dismissing via NavigationService.',
           );
           appCoordinator.navigationService.dismissModal();
         }
-
-        // The state change in AppCoordinator will rebuild the pages list.
-        return true;
       },
     );
   }

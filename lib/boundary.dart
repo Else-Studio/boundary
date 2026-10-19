@@ -9,5 +9,4 @@ export 'model/app_config.dart';
 export 'service/auth_service.dart';
 export 'service/base_api_client.dart';
 export 'service/http_service.dart';
-export 'service/locale_service.dart';
 export 'service/navigation_service.dart';

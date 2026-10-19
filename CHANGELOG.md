@@ -1,3 +1,14 @@
+## 0.5.0 (unreleased)
+
+*   `Error<T>` is now `Failure<T>`, so `dart:core` `Error` is no longer shadowed.
+*   `boundaryLogLevel` and `export LogLevel` added: tests and apps set the lowest level `useLogger` prints; quiet loggers still drop verbose and debug.
+*   `router.dart` uses `onDidRemovePage` in place of the deprecated `onPopPage`; system back on a modal still calls `dismissModal()`.
+*   `HttpService(AuthService, http.BaseClient)`: no `LocaleService`, and no `Accept-Language` header.
+*   `BaseAuthService({required loggerLabel})`: no `LocaleService`, and no `ui_locales` query parameter.
+*   `AppCoordinator.localeService` and the `LocaleService` registration are removed; `locale_service.dart` is no longer exported from `boundary.dart`.
+*   `AppConfig` keeps only `baseUrl` and `debounceTime`; `publicWebOrigin`, `sseWatchdogTimeout` and `sseMinRetryDelay` are removed.
+*   `AppFormatters.formatCurrency` requires `symbol`; the `'€ '` default is removed.
+
 ## 0.4.1
 
 ### Improvements & Bug Fixes

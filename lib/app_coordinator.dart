@@ -9,7 +9,6 @@ import 'model/error_models.dart';
 import 'router.dart';
 import 'service/auth_service.dart';
 import 'service/http_service.dart';
-import 'service/locale_service.dart';
 import 'service/navigation_service.dart';
 import 'utils.dart';
 
@@ -41,7 +40,6 @@ class AppCoordinator extends ChangeNotifier {
 
   NavigationService get navigationService => injector.get<NavigationService>();
   AuthService get authService => injector.get<AuthService>();
-  LocaleService get localeService => injector.get<LocaleService>();
 
   // Add getter for ShellController
   Controller? get shellController => _delegate.shellController;
@@ -57,7 +55,6 @@ class AppCoordinator extends ChangeNotifier {
     authService.initialize();
   }
   void _setupServicesAndControllers() {
-    injector.addSingleton(LocaleService.new);
     injector.addSingleton(() => NavigationService(delegate: _delegate));
     injector.addSingleton<BaseClient>(Client.new);
     injector.addSingleton(HttpService.new);
@@ -86,7 +83,7 @@ class AppCoordinator extends ChangeNotifier {
       onError: (e, s) {
         _logger.error("Error in combined navigation/auth stream", e, s);
         _queueReconcile(
-          Error(e, stackTrace: s),
+          Failure(e, stackTrace: s),
           _baseConfiguration ?? _delegate.getLoginRoute(),
         );
       },
@@ -145,9 +142,9 @@ class AppCoordinator extends ChangeNotifier {
         "Auth state is Loading. Preserving nav request to avoid state loss during auth.",
       );
       determinedConfig = navRequest;
-    } else if (authState is Error<User>) {
+    } else if (authState is Failure<User>) {
       final error = authState.error;
-      _logger.info("Auth state is Error: ${error.runtimeType}");
+      _logger.info("Auth state is Failure: ${error.runtimeType}");
 
       switch (error) {
         case LoggedOut(:final emailForResetPassword):

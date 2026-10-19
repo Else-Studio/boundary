@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils.dart'; // For logger
 import 'locale_changer.dart' if (dart.libary.html) 'html_locale_changer.dart';
 
+// Not wired: locale choice and persistence belong to the app. Playrecord does not switch languages. Kept as a reference.
+
 /// Manages the application's current locale state.
 class LocaleService {
   final _logger = useLogger('LoCS');

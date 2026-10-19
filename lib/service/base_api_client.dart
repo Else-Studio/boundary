@@ -36,26 +36,24 @@ class NetworkException extends ApiException {
 
 /// Thrown when the user's session is no longer valid.
 class SessionTerminatedException extends ApiException {
-  SessionTerminatedException({HttpProblem? problem})
+  SessionTerminatedException({super.problem})
       : super(
           problem?.detail ?? "Your session has expired. Please log in again.",
-          problem: problem,
         );
 }
 
 /// Thrown when the user does not have permission to access a resource (HTTP 403).
 class ForbiddenException extends ApiException {
-  ForbiddenException({HttpProblem? problem})
+  ForbiddenException({super.problem})
       : super(
           problem?.detail ?? "You do not have permission to access this resource.",
-          problem: problem,
         );
 }
 
 /// Thrown when a specific resource is not found (HTTP 404).
 class ResourceNotFoundException extends ApiException {
-  ResourceNotFoundException(String resource, {HttpProblem? problem})
-      : super("$resource not found.", problem: problem);
+  ResourceNotFoundException(String resource, {super.problem})
+      : super("$resource not found.");
 }
 
 /// Thrown when the server reports a validation error.
@@ -68,19 +66,17 @@ class InvalidInputException extends ApiException {
 
 /// Thrown for a generic 5xx server error.
 class ServerUnavailableException extends ApiException {
-  ServerUnavailableException({HttpProblem? problem})
+  ServerUnavailableException({super.problem})
       : super(
           "The server is currently unavailable. Please try again later.",
-          problem: problem,
         );
 }
 
 /// Thrown when an HTTP 429 is received after all retries.
 class RateLimitExceededException extends ApiException {
-  RateLimitExceededException({HttpProblem? problem})
+  RateLimitExceededException({super.problem})
       : super(
           "You are making too many requests. Please wait a moment and try again.",
-          problem: problem,
         );
 }
 

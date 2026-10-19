@@ -13,7 +13,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
 
 import '../utils.dart';
-import 'locale_service.dart';
 
 // --- SHARED DATA MODELS ---
 
@@ -122,8 +121,6 @@ const String _prefsKeyState = 'authState';
 /// flow, JWT validation, and secure credential storage.
 abstract class BaseAuthService implements AuthService {
   @protected
-  final LocaleService localeService;
-  @protected
   final Talker logger;
 
   @protected
@@ -167,7 +164,7 @@ abstract class BaseAuthService implements AuthService {
   @override
   bool get isLoading => _user$.value is Loading;
 
-  BaseAuthService(this.localeService, {required String loggerLabel})
+  BaseAuthService({required String loggerLabel})
       : logger = useLogger(loggerLabel) {
     _loadEnvironmentVariables();
   }
@@ -251,7 +248,7 @@ abstract class BaseAuthService implements AuthService {
         logger.info(
           "Pre-authentication check failed: ${preAuthError.runtimeType}",
         );
-        _user$.add(Error(preAuthError));
+        _user$.add(Failure(preAuthError));
         return;
       }
       logger.verbose("Pre-authentication checks passed.");
@@ -259,7 +256,7 @@ abstract class BaseAuthService implements AuthService {
       final credentialsJson = _prefs?.getString(_prefsKeyCredentials);
       if (credentialsJson == null) {
         logger.info('No saved credentials found.');
-        _user$.add(const Error(NoSessionStored()));
+        _user$.add(const Failure(NoSessionStored()));
         return;
       }
 
@@ -270,7 +267,7 @@ abstract class BaseAuthService implements AuthService {
           await _refreshCredentials(credentials);
         } else {
           await _clearCredentials();
-          _user$.add(const Error(SessionExpired()));
+          _user$.add(const Failure(SessionExpired()));
         }
       } else {
         logger.info('Saved credentials appear valid, verifying token...');
@@ -280,7 +277,7 @@ abstract class BaseAuthService implements AuthService {
       logger.error('Critical error during session load', e, s);
       await _clearCredentials();
       _user$.add(
-        Error(
+        Failure(
           e is AuthError ? e : TokenVerificationFailed(message: e.toString()),
         ),
       );
@@ -310,7 +307,6 @@ abstract class BaseAuthService implements AuthService {
       queryParameters: {
         ...authorizationEndpoint.queryParameters,
         if (accessCodeEmail != null) 'email': accessCodeEmail,
-        'ui_locales': localeService.currentLocale.toLanguageTag(),
         'embedded': embedded ? 'true' : 'false',
       },
     );
@@ -360,7 +356,7 @@ abstract class BaseAuthService implements AuthService {
       logger.error('Error handling authorization response', e, s);
       await _clearCredentials();
       _user$.add(
-        Error(e is AuthError ? e : SessionExpired(message: e.toString())),
+        Failure(e is AuthError ? e : SessionExpired(message: e.toString())),
       );
       _client = null;
       rethrow; // Rethrow so CallbackController can handle it
@@ -391,7 +387,7 @@ abstract class BaseAuthService implements AuthService {
     await _clearCredentials();
     _client = null;
     _user$.add(
-      Error(
+      Failure(
         LoggedOut(emailForResetPassword: resetPassword ? previousEmail : null),
       ),
     );
@@ -399,9 +395,9 @@ abstract class BaseAuthService implements AuthService {
 
   @override
   void clearLoggedOutStateAndPrepareForPolicyCheck() {
-    if (_user$.value is Error<User> &&
-        (_user$.value as Error<User>).error is LoggedOut) {
-      _user$.add(const Error(NoSessionStored()));
+    if (_user$.value is Failure<User> &&
+        (_user$.value as Failure<User>).error is LoggedOut) {
+      _user$.add(const Failure(NoSessionStored()));
     }
   }
 
@@ -480,7 +476,7 @@ abstract class BaseAuthService implements AuthService {
       );
       await _clearCredentials();
       _user$.add(
-        Error(
+        Failure(
           SessionExpired(message: 'Stored session expired. Please sign in again.'),
         ),
       );
@@ -489,7 +485,7 @@ abstract class BaseAuthService implements AuthService {
       logger.error('Failed to refresh credentials', e, s);
       await _clearCredentials();
       _user$.add(
-        Error(
+        Failure(
           e is AuthError ? e : SessionExpired(message: 'Failed to refresh: $e'),
         ),
       );
@@ -515,7 +511,7 @@ abstract class BaseAuthService implements AuthService {
       final authError = e is AuthError ? e : TokenVerificationFailed(message: e.toString());
       logger.error('Token verification failed. Reason: ${authError.message}', e, s);
       await _clearCredentials();
-      _user$.add(Error(authError));
+      _user$.add(Failure(authError));
       _client = null;
       if (e is AuthError) rethrow; // Keep original behavior for AuthErrors if needed
     }

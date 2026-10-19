@@ -14,16 +14,21 @@ Map<String, AnsiPen> _talkerLight = {
 /// logged, so it applies to loggers created earlier.
 LogLevel boundaryLogLevel = LogLevel.verbose;
 
-// Filter to suppress verbose and debug messages from Talker logs.
-class _Quiet extends TalkerFilter {
-  @override
-  bool filter(TalkerData item) =>
-      item.logLevel != LogLevel.verbose && item.logLevel != LogLevel.debug;
-}
+// Filters by [boundaryLogLevel], read at log time. A quiet logger also drops
+// verbose and debug.
+class _LevelFilter extends TalkerFilter {
+  final bool quiet;
+  _LevelFilter({required this.quiet});
 
-class _Debugging extends TalkerFilter {
   @override
-  bool filter(TalkerData item) => true; // item.logLevel != LogLevel.verbose;
+  bool filter(TalkerData item) {
+    final level = item.logLevel ?? LogLevel.info;
+    if (quiet && (level == LogLevel.verbose || level == LogLevel.debug)) {
+      return false;
+    }
+    return logLevelPriorityList.indexOf(level) <=
+        logLevelPriorityList.indexOf(boundaryLogLevel);
+  }
 }
 
 class CustomFormatter implements LoggerFormatter {
@@ -88,8 +93,7 @@ Talker useLogger(String label, {bool quiet = kReleaseMode}) => Talker(
         formatter: CustomFormatter(label),
         settings: TalkerLoggerSettings(maxLineWidth: 25, lineSymbol: '.-'),
       ),
-      filter: quiet ? _Quiet() : _Debugging(),
-      // null, // Use the _Quiet filter if quiet is true
+      filter: _LevelFilter(quiet: quiet),
     );
 
 /// Global logger instance. Please don't use this if possible.
@@ -122,27 +126,19 @@ class Failure<T> extends AsyncResult<T> {
   final String? messageKey;
   final StackTrace? stackTrace;
   const Failure(this.error, {this.stackTrace, this.messageKey});
-}
-
-class Error<T> extends AsyncResult<T> {
-  final Object error;
-  final String? messageKey;
-  final StackTrace? stackTrace;
-  const Error(this.error, {this.stackTrace, this.messageKey});
 
   @override
-  String toString() => 'Error message: $messageKey. Object: $error.';
+  String toString() => 'Failure($error, messageKey: $messageKey)';
 }
 
 /// A centralized class for handling date, number, and currency formatting.
 /// These methods take a locale string directly to avoid dependency on BuildContext.
 class AppFormatters {
   /// Formats a numeric value as a currency string.
-  /// Defaults to Euro (€) symbol.
   static String formatCurrency(
     num value,
     String locale, {
-    String symbol = '€ ',
+    required String symbol,
     int decimalDigits = 2,
   }) {
     return NumberFormat.currency(
