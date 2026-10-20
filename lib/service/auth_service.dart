@@ -23,12 +23,26 @@ final class AuthUnknown extends AuthState {
 final class Authenticated extends AuthState {
   const Authenticated(this.session);
   final AuthSession session;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Authenticated && identical(other.session, session);
+
+  @override
+  int get hashCode => identityHashCode(session);
 }
 
 /// == when the reasons are equal.
 final class SignedOut extends AuthState {
   const SignedOut(this.reason);
   final SignedOutReason reason;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SignedOut && other.reason == reason;
+
+  @override
+  int get hashCode => reason.hashCode;
 }
 
 abstract interface class AccessTokenProvider {

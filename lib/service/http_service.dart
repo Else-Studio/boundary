@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
@@ -56,13 +57,6 @@ class HttpService {
 
   HttpService(this._tokens, this._standardClient);
 
-  Future<http.BaseClient> _selectClient({required bool requireAuth}) async {
-    if (requireAuth) {
-      throw UnimplementedError('not implemented');
-    }
-    return _standardClient;
-  }
-
   Map<String, String> _mergeHeaders({
     Map<String, String>? customHeaders,
     Object? body,
@@ -75,21 +69,60 @@ class HttpService {
     };
   }
 
+  /// The 401 thrown when no token is available. Nothing is sent.
+  HttpException _noTokenException(String method, Uri url) {
+    final problemJson = jsonEncode({
+      'type': 'about:blank',
+      'title': 'Authentication Error',
+      'status': 401,
+      'detail': 'No access token.',
+      'instance': null,
+      'details': null,
+    });
+    return HttpException(
+      http.Response(
+        problemJson,
+        401,
+        headers: {'Content-Type': 'application/problem+json; charset=utf-8'},
+        request: http.Request(method, url),
+      ),
+      requireAuth: true,
+    );
+  }
+
   /// Central private method to wrap all requests with unified error handling,
   /// timeout, and retry logic.
+  ///
+  /// With [requireAuth] the provider's token is sent as a bearer header. A 401
+  /// goes to the provider and, when it gives a new token, is retried once. A
+  /// call that cannot be sent twice ([resendable] false) skips both retries.
   Future<http.Response> _sendRequest(
-    Future<http.Response> Function(http.BaseClient client) requestBuilder, {
+    Future<http.Response> Function(
+      http.BaseClient client,
+      Map<String, String> authHeader,
+    ) requestBuilder, {
     required String method,
     required Uri url,
     required bool requireAuth,
+    bool resendable = true,
   }) async {
-    for (var i = 0; i < _maxRetries; i++) {
+    String? token;
+    if (requireAuth) {
+      token = await _tokens.accessToken();
+      if (token == null) {
+        throw _noTokenException(method, url);
+      }
+    }
+    var refreshed = false;
+    var attempt = 0;
+    while (attempt < _maxRetries) {
       try {
-        final client = await _selectClient(requireAuth: requireAuth);
-        final response = await requestBuilder(client).timeout(_requestTimeout);
+        final response = await requestBuilder(_standardClient, {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }).timeout(_requestTimeout);
 
         _logResponse(response);
-        _checkResponseStatus(response);
+        _checkResponseStatus(response, requireAuth: requireAuth);
         return response; // Success, return the response immediately.
       } on TimeoutException catch (e, s) {
         _logger.error(
@@ -108,8 +141,21 @@ class HttpService {
         // Do not retry on client exceptions, throw immediately.
         throw ClientNetworkException(e);
       } on HttpException catch (e) {
+        if (requireAuth && e.response.statusCode == 401) {
+          // Every 401 goes to the provider, the second one too, so a provider
+          // that cannot refresh has signed out before the app sees the 401.
+          final next = await _tokens.refreshAfterUnauthorized(token!);
+          if (resendable && !refreshed && next != null) {
+            token = next;
+            refreshed = true;
+            continue; // One retry; it does not count against the 429 retries.
+          }
+          rethrow;
+        }
         // This is where the retry logic for specific status codes lives.
-        if (e.response.statusCode == 429 && i < _maxRetries - 1) {
+        if (resendable &&
+            e.response.statusCode == 429 &&
+            attempt < _maxRetries - 1) {
           final retryAfterHeader = e.response.headers['retry-after'];
           Duration delay;
           if (retryAfterHeader != null &&
@@ -117,16 +163,17 @@ class HttpService {
             // Use the server-specified delay if available and valid.
             delay = Duration(seconds: int.parse(retryAfterHeader));
             _logger.warning(
-              'Request to $url failed with 429. Server specified Retry-After: ${delay.inSeconds}s. Retrying... (Attempt ${i + 2})',
+              'Request to $url failed with 429. Server specified Retry-After: ${delay.inSeconds}s. Retrying... (Attempt ${attempt + 2})',
             );
           } else {
             // Fallback to exponential backoff.
-            delay = _baseRetryDelay * pow(2, i);
+            delay = _baseRetryDelay * pow(2, attempt);
             _logger.warning(
-              'Request to $url failed with 429. Retrying in ${delay.inSeconds}s... (Attempt ${i + 2})',
+              'Request to $url failed with 429. Retrying in ${delay.inSeconds}s... (Attempt ${attempt + 2})',
             );
           }
           await Future.delayed(delay);
+          attempt++;
           continue; // Continue to the next iteration of the loop.
         } else {
           // If it's not a 429 or it's the last attempt, rethrow the exception.
@@ -145,6 +192,7 @@ class HttpService {
             500,
             request: http.Request(method, url),
           ),
+          requireAuth: requireAuth,
         );
       }
     }
@@ -161,7 +209,8 @@ class HttpService {
     _logger.verbose('HttpService GET: $url');
     final effectiveHeaders = _mergeHeaders(customHeaders: headers);
     return _sendRequest(
-      (client) => client.get(url, headers: effectiveHeaders),
+      (client, auth) =>
+          client.get(url, headers: {...effectiveHeaders, ...auth}),
       method: 'GET',
       url: url,
       requireAuth: requireAuth,
@@ -178,7 +227,8 @@ class HttpService {
     _logger.verbose('HttpService POST: $url');
     final effectiveHeaders = _mergeHeaders(customHeaders: headers, body: body);
     return _sendRequest(
-      (client) => client.post(url, headers: effectiveHeaders, body: body),
+      (client, auth) =>
+          client.post(url, headers: {...effectiveHeaders, ...auth}, body: body),
       method: 'POST',
       url: url,
       requireAuth: requireAuth,
@@ -195,7 +245,8 @@ class HttpService {
     _logger.verbose('HttpService PUT: $url\nBody: $body');
     final effectiveHeaders = _mergeHeaders(customHeaders: headers, body: body);
     return _sendRequest(
-      (client) => client.put(url, headers: effectiveHeaders, body: body),
+      (client, auth) =>
+          client.put(url, headers: {...effectiveHeaders, ...auth}, body: body),
       method: 'PUT',
       url: url,
       requireAuth: requireAuth,
@@ -212,7 +263,8 @@ class HttpService {
     _logger.verbose('HttpService PATCH: $url\nBody: $body');
     final effectiveHeaders = _mergeHeaders(customHeaders: headers, body: body);
     return _sendRequest(
-      (client) => client.patch(url, headers: effectiveHeaders, body: body),
+      (client, auth) => client.patch(url,
+          headers: {...effectiveHeaders, ...auth}, body: body),
       method: 'PATCH',
       url: url,
       requireAuth: requireAuth,
@@ -229,7 +281,8 @@ class HttpService {
     _logger.verbose('HttpService DELETE: $url');
     final effectiveHeaders = _mergeHeaders(customHeaders: headers, body: body);
     return _sendRequest(
-      (client) => client.delete(url, headers: effectiveHeaders, body: body),
+      (client, auth) => client.delete(url,
+          headers: {...effectiveHeaders, ...auth}, body: body),
       method: 'DELETE',
       url: url,
       requireAuth: requireAuth,
@@ -248,9 +301,9 @@ class HttpService {
     final effectiveHeaders = _mergeHeaders(customHeaders: headers);
 
     return _sendRequest(
-      (client) async {
+      (client, auth) async {
         final request = http.MultipartRequest('POST', url)
-          ..headers.addAll(effectiveHeaders)
+          ..headers.addAll({...effectiveHeaders, ...auth})
           ..fields.addAll(fields ?? {})
           ..files.addAll(files);
 
@@ -260,6 +313,7 @@ class HttpService {
       method: 'POST',
       url: url,
       requireAuth: requireAuth,
+      resendable: false,
     );
   }
 
@@ -270,9 +324,12 @@ class HttpService {
   }
 
   /// Throws [HttpException] for any non-2xx status code.
-  void _checkResponseStatus(http.Response response) {
+  void _checkResponseStatus(
+    http.Response response, {
+    required bool requireAuth,
+  }) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw HttpException(response);
+      throw HttpException(response, requireAuth: requireAuth);
     }
   }
 

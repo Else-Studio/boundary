@@ -48,6 +48,22 @@
 *   `ConfigurationBase.parent` is new: where back goes from a route; null for a top route.
 *   `NavigationService.navigateUp()` dismisses a shown modal, or else goes to the shown base route's parent; it returns false and requests nothing when there is neither.
 *   `CoreRouterDelegate.popRoute()` (system back) pops a shown modal, or else calls `navigateUp()`; the app exits only when the route has no parent.
+*   `AuthState` is `AuthUnknown`, `Authenticated(session)` or `SignedOut(reason)`; the coordinator reads it from `AuthService.authState` instead of `userStream`.
+*   `AuthSession({subject})` is who is signed in; apps may extend it.
+*   `SignedOutReason` is `noSession`, `expired` or `signedOut`.
+*   `AccessTokenProvider` has `accessToken()` and `refreshAfterUnauthorized(rejectedToken)`.
+*   `AuthService` is now a small interface: `authState`, `initialize()`, `signOut()` and `dispose()`, on top of `AccessTokenProvider`.
+*   `HttpService(AccessTokenProvider, http.BaseClient)` sends `Authorization: Bearer`; a 401 goes to the provider and is retried once with its new token, a second 401 is reported to the provider and thrown, and with no token a 401 is thrown without sending.
+*   `HttpService.postMultipart` sends once: no 401 retry and no 429 retry.
+*   `HttpException.requireAuth` says whether the call needed a token.
+*   `AppCoordinator` creates the no-state fallback controller once and disposes it with the first base controller or with the coordinator.
+*   Removed: the old `AuthService` members (`userStream`, `isLoading`, `getAuthenticatedClient`, registration, data policy and session messages, `clearLoggedOutStateAndPrepareForPolicyCheck`).
+*   Removed: `User`.
+*   Removed: `AuthError` and its subclasses.
+*   Removed: `RegisteredUserInfo`.
+*   Removed: `BaseAuthService`; the OAuth service returns in `oauth.dart`.
+*   Removed: `HttpService.getBearerToken`.
+
 
 ## 0.4.1
 

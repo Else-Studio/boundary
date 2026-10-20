@@ -21,6 +21,7 @@ class AppCoordinator extends ChangeNotifier {
   ConfigurationBase? _baseConfiguration;
   ConfigurationBase? _modalConfiguration;
   Controller? _baseController;
+  Controller? _fallbackController;
   Controller? _modalController;
   LayoutBinding? _layout;
   Controller? _layoutController;
@@ -288,6 +289,11 @@ class AppCoordinator extends ChangeNotifier {
               ? _createController(_baseConfiguration!)
               : null;
         }
+        final fallback = _fallbackController;
+        if (fallback != null && _baseController != null) {
+          _fallbackController = null;
+          _disposeControllerAfterRouteUpdate(fallback);
+        }
       }
 
       if (modalConfigChanged) {
@@ -352,6 +358,8 @@ class AppCoordinator extends ChangeNotifier {
       if (!_pendingControllerDisposals.remove(controller)) return;
       controller.dispose();
     });
+    // Without a scheduled frame the callback would wait for the next one.
+    binding.ensureVisualUpdate();
   }
 
   WidgetsBinding? _widgetsBindingOrNull() {
@@ -364,8 +372,7 @@ class AppCoordinator extends ChangeNotifier {
 
   Widget getBaseContentWidget() {
     if (_baseController == null) {
-      if (_baseConfiguration == null &&
-          authService.authState.value is AuthUnknown) {
+      if (authService.authState.value is AuthUnknown) {
         return const Scaffold(
           key: ValueKey('AppCoordinatorLoadingBase-Generic'),
           body: Center(child: CircularProgressIndicator()),
@@ -379,7 +386,8 @@ class AppCoordinator extends ChangeNotifier {
               "Application state could not be determined (no base controller).",
         ),
       );
-      return routeTable.bindingFor(route).buildView(_createController(route));
+      final fallback = _fallbackController ??= _createController(route);
+      return routeTable.bindingFor(route).buildView(fallback);
     }
     final binding = routeTable.bindingFor(_baseConfiguration!);
     final page = binding.buildView(_baseController!);
@@ -406,6 +414,7 @@ class AppCoordinator extends ChangeNotifier {
     _compositeSubscription.dispose();
 
     _baseController?.dispose();
+    _fallbackController?.dispose();
     _modalController?.dispose();
     for (final controller in _pendingControllerDisposals) {
       controller.dispose();
