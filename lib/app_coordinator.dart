@@ -67,7 +67,8 @@ class AppCoordinator extends ChangeNotifier {
     injector.addSingleton(
         () => NavigationService(delegate: _delegate, routes: routeTable));
     injector.addSingleton<BaseClient>(Client.new);
-    injector.addSingleton(HttpService.new);
+    injector.addSingleton<HttpService>(() =>
+        HttpService(injector.get<AuthService>(), injector.get<BaseClient>()));
 
     _delegate.registerDependencies(injector);
 
@@ -77,10 +78,10 @@ class AppCoordinator extends ChangeNotifier {
 
   void _setupListeners() {
     CombineLatestStream.combine2(
-      authService.userStream,
+      authService.authState,
       navigationService.routeRequestStream.whereNotNull(),
-      (AsyncResult<User> authState, ConfigurationBase navRequest) => (
-        auth: authState,
+      (AuthState authState, ConfigurationBase navRequest) => (
+        auth: authState as Object,
         nav: navRequest,
       ),
     ).distinct().listen(
@@ -93,7 +94,7 @@ class AppCoordinator extends ChangeNotifier {
       onError: (e, s) {
         _logger.error("Error in combined navigation/auth stream", e, s);
         _queueReconcile(
-          Failure(e, stackTrace: s),
+          Failure<Object>(e, stackTrace: s),
           _baseConfiguration ?? _delegate.getLoginRoute(),
         );
       },
@@ -102,7 +103,7 @@ class AppCoordinator extends ChangeNotifier {
   }
 
   void _queueReconcile(
-    AsyncResult<User> authState,
+    Object authState,
     ConfigurationBase navRequest,
   ) {
     if (_isDisposed) return;
@@ -112,7 +113,7 @@ class AppCoordinator extends ChangeNotifier {
   }
 
   Future<void> _reconcileSafely(
-    AsyncResult<User> authState,
+    Object authState,
     ConfigurationBase navRequest,
   ) async {
     if (_isDisposed) return;
@@ -128,37 +129,30 @@ class AppCoordinator extends ChangeNotifier {
   /// Resolves (auth, request) to the route to show, or null for "no state
   /// change".
   Future<ConfigurationBase?> _resolve(
-    AsyncResult<User> authState,
+    Object authState,
     ConfigurationBase navRequest,
   ) async {
-    if (authState is Loading<User>) {
+    final state = authState is AuthState ? authState : null;
+    if (state is AuthUnknown) {
       _logger.info(
-        "Auth state is Loading. Preserving nav request to avoid state loss during auth.",
+        "Auth state is unknown. Preserving nav request to avoid state loss during auth.",
       );
       return navRequest;
     }
 
-    final isSignedIn = authState is Data<User>;
+    final isSignedIn = state is Authenticated;
     var candidate = navRequest;
 
-    if (authState is Failure<User>) {
-      final error = authState.error;
-      _logger.info("Auth state is Failure: ${error.runtimeType}");
-      if (error is! LoggedOut &&
-          error is! NoSessionStored &&
-          error is! SessionExpired) {
-        _logger.error(
-          "Unhandled AuthError: ${error.runtimeType}. Showing generic error.",
-        );
-        return ErrorRoute(
-          isSessionTermination: true,
-          message: 'error.session.unexpected',
-          problem: HttpProblem(
-            title: 'Unhandled AuthError',
-            detail: error.toString(),
-          ),
-        );
-      }
+    if (authState is Failure) {
+      _logger.error("Auth state error: ${authState.error}");
+      return ErrorRoute(
+        isSessionTermination: true,
+        message: 'error.session.unexpected',
+        problem: HttpProblem(
+          title: 'Auth state error',
+          detail: authState.error.toString(),
+        ),
+      );
     } else if (isSignedIn) {
       final postAuthDestination =
           await navigationService.consumePostAuthRedirect();
@@ -189,9 +183,8 @@ class AppCoordinator extends ChangeNotifier {
           candidate = _delegate.getPostLoginDefaultRoute();
         }
       } else if (access == RouteAccess.protected) {
-        if (authState is Failure<User> && authState.error is LoggedOut) {
-          _logger.info("LoggedOut state detected. Navigating...");
-          authService.clearLoggedOutStateAndPrepareForPolicyCheck();
+        if (state is SignedOut && state.reason == SignedOutReason.signedOut) {
+          _logger.info("Signed out by the user. Navigating...");
           navigationService.navigateTo(_delegate.getLoginRoute());
           return null;
         }
@@ -235,7 +228,7 @@ class AppCoordinator extends ChangeNotifier {
   }
 
   Future<void> _reconcileState(
-    AsyncResult<User> authState,
+    Object authState,
     ConfigurationBase navRequest,
   ) async {
     if (_isDisposed) return;
@@ -255,7 +248,7 @@ class AppCoordinator extends ChangeNotifier {
 
     if (isRequestingModal) {
       nextBaseConfig = _baseConfiguration;
-      if (nextBaseConfig == null && authState is! Loading) {
+      if (nextBaseConfig == null && authState is! AuthUnknown) {
         nextBaseConfig = determinedConfig.defaultBaseRoute ??
             _delegate.getPostLoginDefaultRoute();
 
@@ -371,9 +364,8 @@ class AppCoordinator extends ChangeNotifier {
 
   Widget getBaseContentWidget() {
     if (_baseController == null) {
-      if (authService.isLoading ||
-          (_baseConfiguration == null &&
-              authService.userStream.value is Loading<User>)) {
+      if (_baseConfiguration == null &&
+          authService.authState.value is AuthUnknown) {
         return const Scaffold(
           key: ValueKey('AppCoordinatorLoadingBase-Generic'),
           body: Center(child: CircularProgressIndicator()),

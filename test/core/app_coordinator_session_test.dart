@@ -15,7 +15,6 @@
 import 'package:boundary/route_table.dart';
 import 'package:boundary/router.dart';
 import 'package:boundary/service/auth_service.dart';
-import 'package:boundary/utils.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -85,8 +84,7 @@ void main() {
         bind<FakeProtectedRoute>('/protected', FakeProtectedRoute.new),
         bind<FakeLoginRoute>('/login', FakeLoginRoute.new,
             access: RouteAccess.guestOnly),
-        bind<FakePostLoginDefaultRoute>(
-            '/home', FakePostLoginDefaultRoute.new),
+        bind<FakePostLoginDefaultRoute>('/home', FakePostLoginDefaultRoute.new),
         bind<FakeRootRoute>('/', FakeRootRoute.new),
         bind<FakeLogoutRoute>('/logout', FakeLogoutRoute.new,
             access: RouteAccess.public),
@@ -100,8 +98,9 @@ void main() {
           // Arrange
           final unprotectedRoute = FakeUnprotectedRoute();
 
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(const Failure(NoSessionStored())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                const SignedOut(SignedOutReason.noSession)),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(unprotectedRoute),
@@ -127,8 +126,9 @@ void main() {
           final protectedRoute = FakeProtectedRoute();
           final loginRoute = FakeLoginRoute();
 
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(const Failure(NoSessionStored())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                const SignedOut(SignedOutReason.noSession)),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(protectedRoute),
@@ -154,8 +154,9 @@ void main() {
         () async {
           // Arrange
           final loginRoute = FakeLoginRoute();
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(const Failure(LoggedOut())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                const SignedOut(SignedOutReason.signedOut)),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(FakeProtectedRoute()),
@@ -168,9 +169,6 @@ void main() {
           await Future.delayed(Duration.zero);
 
           // Assert
-          verify(provider.mockAuthService
-                  .clearLoggedOutStateAndPrepareForPolicyCheck())
-              .called(1);
           verify(provider.mockNavigationService.navigateTo(loginRoute))
               .called(1);
         },
@@ -183,8 +181,9 @@ void main() {
         () async {
           // Arrange
           final protectedRoute = FakeProtectedRoute();
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(Data(ModelFactory.createUser())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                Authenticated(ModelFactory.createSession())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(protectedRoute),
@@ -208,8 +207,9 @@ void main() {
           // Arrange
           final loginRoute = FakeLoginRoute();
           final defaultRoute = FakePostLoginDefaultRoute();
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(Data(ModelFactory.createUser())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                Authenticated(ModelFactory.createSession())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(loginRoute),
@@ -234,10 +234,10 @@ void main() {
           final protectedRoute = FakeProtectedRoute();
           final loginRoute = FakeLoginRoute();
 
-          final authStreamController = BehaviorSubject<AsyncResult<User>>();
+          final authStreamController = BehaviorSubject<AuthState>();
           final navStreamController = BehaviorSubject<ConfigurationBase>();
 
-          when(provider.mockAuthService.userStream)
+          when(provider.mockAuthService.authState)
               .thenAnswer((_) => authStreamController.stream);
           when(provider.mockNavigationService.routeRequestStream)
               .thenAnswer((_) => navStreamController.stream);
@@ -250,14 +250,14 @@ void main() {
           // 1. Create the coordinator and push the initial unauthenticated state
           final coordinator =
               SutFactory.createAppCoordinator(provider: provider);
-          authStreamController.add(const Failure(NoSessionStored()));
+          authStreamController.add(const SignedOut(SignedOutReason.noSession));
           navStreamController.add(protectedRoute);
 
           // Wait for the first reconciliation (user is sent to login)
           await Future.delayed(Duration.zero);
 
           // 2. Simulate a successful login by pushing the new auth state
-          authStreamController.add(Data(ModelFactory.createUser()));
+          authStreamController.add(Authenticated(ModelFactory.createSession()));
 
           // Wait for the second reconciliation (user is redirected)
           await Future.delayed(Duration.zero);
@@ -276,8 +276,9 @@ void main() {
           final rootRoute = FakeRootRoute();
           final defaultRoute = FakePostLoginDefaultRoute();
 
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(Data(ModelFactory.createUser())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                Authenticated(ModelFactory.createSession())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(rootRoute),
@@ -300,8 +301,9 @@ void main() {
         () async {
           // Arrange
           final logoutRoute = FakeLogoutRoute();
-          when(provider.mockAuthService.userStream).thenAnswer(
-            (_) => BehaviorSubject.seeded(Data(ModelFactory.createUser())),
+          when(provider.mockAuthService.authState).thenAnswer(
+            (_) => BehaviorSubject.seeded(
+                Authenticated(ModelFactory.createSession())),
           );
           when(provider.mockNavigationService.routeRequestStream).thenAnswer(
             (_) => BehaviorSubject.seeded(logoutRoute),

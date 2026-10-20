@@ -7,7 +7,6 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:boundary/service/auth_service.dart';
-import 'package:boundary/utils.dart';
 
 import 'mocks.mocks.dart';
 import 'model_factory.dart';
@@ -47,10 +46,14 @@ class MockDependencyProvider {
   void _stubDefaults() {
     // --- AuthService ---
     // The user is instantly and successfully authenticated.
-    when(mockAuthService.authenticated).thenReturn(true);
-    when(mockAuthService.userStream).thenAnswer(
-      (_) => BehaviorSubject.seeded(Data(ModelFactory.createUser())),
+    when(mockAuthService.authState).thenAnswer(
+      (_) => BehaviorSubject<AuthState>.seeded(
+          Authenticated(ModelFactory.createSession())),
     );
+    when(mockAuthService.accessToken())
+        .thenAnswer((_) async => 'mock-access-token');
+    when(mockAuthService.refreshAfterUnauthorized(any))
+        .thenAnswer((_) async => null);
 
     // --- NavigationService ---
     // Navigation calls complete successfully but do nothing.
@@ -84,17 +87,18 @@ class MockDependencyProvider {
 
   // --- On-Demand Stubs for Specific Scenarios ---
 
-  /// Overrides the default `userStream` stub to simulate a realistic
-  /// asynchronous authentication flow (`Loading` state followed by `Data` state).
+  /// Overrides the default `authState` stub to simulate a realistic
+  /// asynchronous authentication flow (`AuthUnknown` followed by
+  /// `Authenticated`).
   ///
   /// Use this in tests that need to verify a controller's behavior
   /// during the authentication process.
   void stubAuthLoadingSequence() {
-    when(mockAuthService.userStream).thenAnswer(
-      (_) => Stream<AsyncResult<User>>.fromIterable([
-        const Loading(),
-        Data(ModelFactory.createUser()),
-      ]).shareValueSeeded(const Loading()),
+    when(mockAuthService.authState).thenAnswer(
+      (_) => Stream<AuthState>.fromIterable([
+        const AuthUnknown(),
+        Authenticated(ModelFactory.createSession()),
+      ]).shareValueSeeded(const AuthUnknown()),
     );
   }
 

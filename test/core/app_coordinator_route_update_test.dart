@@ -141,7 +141,7 @@ class TagController extends Controller<void> {
 void main() {
   group('AppCoordinator route updates', () {
     late MockDependencyProvider provider;
-    late BehaviorSubject<AsyncResult<User>> authStream;
+    late BehaviorSubject<AuthState> authStream;
     late BehaviorSubject<ConfigurationBase> navStream;
     late AppCoordinator coordinator;
 
@@ -201,11 +201,11 @@ void main() {
       awareControllers = [];
       plainControllers = [];
       noteControllers = [];
-      authStream = BehaviorSubject.seeded(Data(ModelFactory.createUser()));
+      authStream =
+          BehaviorSubject.seeded(Authenticated(ModelFactory.createSession()));
       navStream = BehaviorSubject();
-      when(provider.mockAuthService.userStream)
+      when(provider.mockAuthService.authState)
           .thenAnswer((_) => authStream.stream);
-      when(provider.mockAuthService.isLoading).thenReturn(false);
       when(provider.mockNavigationService.routeRequestStream)
           .thenAnswer((_) => navStream.stream);
     });

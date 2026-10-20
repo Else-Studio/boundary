@@ -1,30 +1,14 @@
 import 'package:boundary/model/error_models.dart';
 import 'package:boundary/service/auth_service.dart';
-import 'package:oauth2/oauth2.dart' as oauth2;
 
 /// A factory for creating data model instances for testing purposes.
 /// This is the single source of truth for test data, ensuring consistency
 /// and making model changes easier to manage across the test suite.
 class ModelFactory {
-  /// Creates a standard, valid [User] instance with mock credentials.
-  static User createUser({
-    oauth2.Credentials? credentials,
-  }) {
-    return User(credentials ?? createCredentials());
-  }
-
-  /// Creates a standard, valid [oauth2.Credentials] object.
-  static oauth2.Credentials createCredentials({
-    String accessToken = 'mock-access-token',
-    String? refreshToken = 'mock-refresh-token',
-    DateTime? expiration,
-  }) {
-    return oauth2.Credentials(
-      accessToken,
-      refreshToken: refreshToken,
-      // Expires in 1 hour by default
-      expiration: expiration ?? DateTime.now().add(const Duration(hours: 1)),
-    );
+  /// Creates a standard [AuthSession].
+  static AuthSession createSession(
+      {String? subject = 'therapist@example.com'}) {
+    return AuthSession(subject: subject);
   }
 
   /// Creates an [HttpProblem] representing a 500 Internal Server Error.

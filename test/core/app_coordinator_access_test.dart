@@ -137,14 +137,14 @@ void main() {
     /// Creates the coordinator for [authState] and [request], and returns it
     /// after the request is resolved.
     Future<AppCoordinator> show(
-      AsyncResult<User> authState,
+      AuthState authState,
       ConfigurationBase request, {
       List<RouteGuard> guards = const [],
     }) async {
       when(provider.mockAppCoordinatorDelegate.createGuards(any))
           .thenReturn(guards);
-      when(auth().userStream).thenAnswer(
-        (_) => BehaviorSubject<AsyncResult<User>>.seeded(authState),
+      when(auth().authState).thenAnswer(
+        (_) => BehaviorSubject<AuthState>.seeded(authState),
       );
       when(navigation().routeRequestStream).thenAnswer(
         (_) => BehaviorSubject<ConfigurationBase>.seeded(request),
@@ -154,11 +154,11 @@ void main() {
       return coordinator;
     }
 
-    final signedIn = Data<User>(ModelFactory.createUser());
-    const noSession = Failure<User>(NoSessionStored());
-    const expired = Failure<User>(SessionExpired());
-    const loggedOut = Failure<User>(LoggedOut());
-    const loading = Loading<User>();
+    final signedIn = Authenticated(ModelFactory.createSession());
+    const noSession = SignedOut(SignedOutReason.noSession);
+    const expired = SignedOut(SignedOutReason.expired);
+    const loggedOut = SignedOut(SignedOutReason.signedOut);
+    const unknown = AuthUnknown();
 
     setUp(() async {
       originalLogLevel = boundaryLogLevel;
@@ -242,30 +242,29 @@ void main() {
       });
 
       test(
-          'when logged out a protected route clears the state and requests the login route',
+          'when signed out by the user a protected route requests the login route',
           () async {
         final coordinator = await show(loggedOut, const CasesRoute());
 
         expect(coordinator.baseConfiguration, isNull);
-        verify(auth().clearLoggedOutStateAndPrepareForPolicyCheck()).called(1);
         verify(navigation().navigateTo(const GuestRoute())).called(1);
         verifyNever(navigation().setPostAuthRedirect(any));
       });
 
-      test('when logged out a public route stays where it is', () async {
+      test('when signed out by the user a public route stays where it is',
+          () async {
         final coordinator = await show(loggedOut, const PublicRoute());
 
         expect(coordinator.baseConfiguration, const PublicRoute());
         verifyNever(navigation().navigateTo(any));
-        verifyNever(auth().clearLoggedOutStateAndPrepareForPolicyCheck());
       });
 
-      test('while auth is loading the request is shown and no guard runs',
+      test('while auth is unknown the request is shown and no guard runs',
           () async {
         final guard = RecordingGuard();
 
         final coordinator =
-            await show(loading, const CasesRoute(), guards: [guard]);
+            await show(unknown, const CasesRoute(), guards: [guard]);
 
         expect(coordinator.baseConfiguration, const CasesRoute());
         expect(guard.seen, isEmpty);
@@ -377,8 +376,8 @@ void main() {
         addTearDown(navStream.close);
         when(provider.mockAppCoordinatorDelegate.createGuards(any))
             .thenReturn([RecordingGuard()]);
-        when(auth().userStream).thenAnswer(
-          (_) => BehaviorSubject<AsyncResult<User>>.seeded(signedIn),
+        when(auth().authState).thenAnswer(
+          (_) => BehaviorSubject<AuthState>.seeded(signedIn),
         );
         when(navigation().routeRequestStream)
             .thenAnswer((_) => navStream.stream);
@@ -394,8 +393,7 @@ void main() {
         }
 
         expect(coordinator.baseConfiguration, const HomeRoute());
-        verify(provider.mockAppCoordinatorDelegate.createGuards(any))
-            .called(1);
+        verify(provider.mockAppCoordinatorDelegate.createGuards(any)).called(1);
       });
     });
   });

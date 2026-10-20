@@ -81,7 +81,7 @@ class LoginController extends Controller<void> {
 void main() {
   group('AppCoordinator resolved routes', () {
     late MockDependencyProvider provider;
-    late BehaviorSubject<AsyncResult<User>> authStream;
+    late BehaviorSubject<AuthState> authStream;
     late BehaviorSubject<ConfigurationBase> navStream;
     late AppCoordinator coordinator;
 
@@ -118,11 +118,11 @@ void main() {
       provider = MockDependencyProvider();
       await SutFactory.initTestBed(provider: provider);
 
-      authStream = BehaviorSubject.seeded(Data(ModelFactory.createUser()));
+      authStream =
+          BehaviorSubject.seeded(Authenticated(ModelFactory.createSession()));
       navStream = BehaviorSubject();
-      when(provider.mockAuthService.userStream)
+      when(provider.mockAuthService.authState)
           .thenAnswer((_) => authStream.stream);
-      when(provider.mockAuthService.isLoading).thenReturn(false);
       when(provider.mockNavigationService.routeRequestStream)
           .thenAnswer((_) => navStream.stream);
       when(provider.mockAppCoordinatorDelegate.routes).thenReturn(routes);
@@ -144,7 +144,7 @@ void main() {
     testWidgets(
         'the coordinator reports the route it shows after a redirect, not the request',
         (tester) async {
-      authStream.add(const Failure(NoSessionStored()));
+      authStream.add(const SignedOut(SignedOutReason.noSession));
       when(provider.mockAppCoordinatorDelegate.getLoginRoute())
           .thenReturn(const FakeLoginRoute());
       coordinator = SutFactory.createAppCoordinator(provider: provider);

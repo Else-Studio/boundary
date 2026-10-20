@@ -7,6 +7,9 @@
 //   - test: a modal gets its controller and page from its binding
 //   - test: a page reads its controller from Provider
 //   - test: with no state the fallback is built from the ErrorRoute binding
+//   - test: the no-state fallback controller is created once
+//   - test: the no-state fallback controller is disposed with the coordinator
+//   - test: the no-state fallback controller is disposed when a base controller is created
 
 import 'package:boundary/boundary.dart';
 import 'package:flutter/material.dart';
@@ -83,7 +86,7 @@ class NotePage extends StatelessWidget {
 void main() {
   group('AppCoordinator route bindings', () {
     late MockDependencyProvider provider;
-    late BehaviorSubject<AsyncResult<User>> authStream;
+    late BehaviorSubject<AuthState> authStream;
     late BehaviorSubject<ConfigurationBase> navStream;
     late AppCoordinator coordinator;
 
@@ -123,11 +126,11 @@ void main() {
       caseControllers = [];
       noteControllers = [];
       errorControllers = [];
-      authStream = BehaviorSubject.seeded(Data(ModelFactory.createUser()));
+      authStream =
+          BehaviorSubject.seeded(Authenticated(ModelFactory.createSession()));
       navStream = BehaviorSubject();
-      when(provider.mockAuthService.userStream)
+      when(provider.mockAuthService.authState)
           .thenAnswer((_) => authStream.stream);
-      when(provider.mockAuthService.isLoading).thenReturn(false);
       when(provider.mockNavigationService.routeRequestStream)
           .thenAnswer((_) => navStream.stream);
     });
@@ -231,7 +234,8 @@ void main() {
       );
     });
 
-    testWidgets('with no state the fallback is built from the ErrorRoute binding',
+    testWidgets(
+        'with no state the fallback is built from the ErrorRoute binding',
         (tester) async {
       createCoordinator(<RouteBinding>[
         caseBinding(),
@@ -263,6 +267,67 @@ void main() {
         find.text('case ${errorControllers.single.hashCode}'),
         findsOneWidget,
       );
+    });
+
+    RouteBinding<ErrorRoute, CaseController> errorBinding() =>
+        RouteBinding<ErrorRoute, CaseController>(
+          path: ErrorRoute.path,
+          parse: (p) => ErrorRoute(message: p['message'] ?? ''),
+          controller: (_) {
+            final controller = CaseController();
+            errorControllers.add(controller);
+            return controller;
+          },
+          page: const CasePage(),
+        );
+
+    testWidgets('the no-state fallback controller is created once',
+        (tester) async {
+      createCoordinator(<RouteBinding>[caseBinding(), errorBinding()]);
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+
+      final first = coordinator.getBaseContentWidget();
+      final second = coordinator.getBaseContentWidget();
+
+      expect(errorControllers, hasLength(1));
+      await pumpContent(tester, first);
+      expect(
+        find.text('case ${errorControllers.single.hashCode}'),
+        findsOneWidget,
+      );
+      await pumpContent(tester, second);
+      expect(
+        find.text('case ${errorControllers.single.hashCode}'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'the no-state fallback controller is disposed with the coordinator',
+        (tester) async {
+      createCoordinator(<RouteBinding>[caseBinding(), errorBinding()]);
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      coordinator.getBaseContentWidget();
+      final fallback = errorControllers.single;
+      expect(fallback.isDisposed, isFalse);
+
+      coordinator.dispose();
+
+      expect(fallback.isDisposed, isTrue);
+    });
+
+    testWidgets(
+        'the no-state fallback controller is disposed when a base controller is created',
+        (tester) async {
+      createCoordinator(<RouteBinding>[caseBinding(), errorBinding()]);
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      coordinator.getBaseContentWidget();
+      final fallback = errorControllers.single;
+
+      await emit(tester, const CaseRoute(7));
+
+      expect(coordinator.baseConfiguration, const CaseRoute(7));
+      expect(fallback.isDisposed, isTrue);
     });
   });
 }

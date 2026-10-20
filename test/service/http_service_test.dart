@@ -14,6 +14,18 @@ import '../helpers/mocks.mocks.dart';
 //
 // ## Group: Authentication and Client Selection
 // - test('should use standard client when requireAuth is false')
+// - test('a request carries the provider's bearer token')
+// - test('a POST with a body carries the bearer token next to its content headers')
+// - test('with no token nothing is sent and a 401 is thrown')
+// - test('a 401 asks the provider to refresh and retries once with the new token')
+// - test('a refresh that gives no token lets the 401 stand')
+// - test('a second 401 is reported to the provider and not retried')
+// - test('an unauthenticated request asks the provider for no token')
+// - test('an unauthenticated 401 is thrown as an exception that needed no token')
+// - test('a 429 is retried after retry-after')
+// - test('a multipart upload is sent once even after a 401')
+// - test('an error from accessToken reaches the caller')
+// - test('an error from refreshAfterUnauthorized reaches the caller')
 //
 // ## Group: Headers
 // - test('sends only Accept on a GET without a body')
@@ -54,6 +66,239 @@ void main() {
         // Assert
         verify(mockHttpClient.get(testUrl, headers: anyNamed('headers')))
             .called(1);
+      });
+
+      group('bearer token', () {
+        final url = Uri.parse('https://api.example.com/data');
+
+        MockAuthService tokens() => provider.mockAuthService;
+
+        /// Answers with each response in turn.
+        Future<http.Response> Function(Invocation) inOrder(
+            List<http.Response> responses) {
+          var next = 0;
+          return (_) async => responses[next++];
+        }
+
+        test('a request carries the provider\'s bearer token', () async {
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer((_) async => http.Response('{}', 200));
+
+          await httpService.get(url);
+
+          final headers = verify(
+                  mockHttpClient.get(any, headers: captureAnyNamed('headers')))
+              .captured
+              .single as Map<String, String>;
+          expect(headers, {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer tok-1',
+          });
+        });
+
+        test(
+            'a POST with a body carries the bearer token next to its content headers',
+            () async {
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(mockHttpClient.post(any,
+                  headers: anyNamed('headers'), body: anyNamed('body')))
+              .thenAnswer((_) async => http.Response('{}', 200));
+
+          await httpService.post(url, body: '{"a":1}');
+
+          final headers = verify(mockHttpClient.post(any,
+                  headers: captureAnyNamed('headers'), body: anyNamed('body')))
+              .captured
+              .single as Map<String, String>;
+          expect(headers, {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer tok-1',
+          });
+        });
+
+        test('with no token nothing is sent and a 401 is thrown', () async {
+          when(tokens().accessToken()).thenAnswer((_) async => null);
+
+          await expectLater(
+            httpService.get(url),
+            throwsA(isA<HttpException>()
+                .having((e) => e.response.statusCode, 'statusCode', 401)
+                .having((e) => e.requireAuth, 'requireAuth', true)),
+          );
+
+          verifyNever(mockHttpClient.get(any, headers: anyNamed('headers')));
+        });
+
+        test(
+            'a 401 asks the provider to refresh and retries once with the new token',
+            () async {
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(tokens().refreshAfterUnauthorized('tok-1'))
+              .thenAnswer((_) async => 'tok-2');
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer(inOrder([
+            http.Response('', 401),
+            http.Response('{"ok":true}', 200),
+          ]));
+
+          final response = await httpService.get(url);
+
+          expect(response.body, '{"ok":true}');
+          final headers = verify(
+                  mockHttpClient.get(any, headers: captureAnyNamed('headers')))
+              .captured
+              .cast<Map<String, String>>();
+          expect(headers, hasLength(2));
+          expect(headers.first['Authorization'], 'Bearer tok-1');
+          expect(headers.last['Authorization'], 'Bearer tok-2');
+          expect(
+            verify(tokens().refreshAfterUnauthorized(captureAny)).captured,
+            ['tok-1'],
+          );
+        });
+
+        test('a refresh that gives no token lets the 401 stand', () async {
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(tokens().refreshAfterUnauthorized('tok-1'))
+              .thenAnswer((_) async => null);
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer(
+                  (_) async => http.Response('{"reason":"unauthorized"}', 401));
+
+          await expectLater(
+            httpService.get(url),
+            throwsA(isA<HttpException>()
+                .having(
+                    (e) => e.response.body, 'body', '{"reason":"unauthorized"}')
+                .having((e) => e.requireAuth, 'requireAuth', true)),
+          );
+
+          verify(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .called(1);
+        });
+
+        test('a second 401 is reported to the provider and not retried',
+            () async {
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(tokens().refreshAfterUnauthorized('tok-1'))
+              .thenAnswer((_) async => 'tok-2');
+          when(tokens().refreshAfterUnauthorized('tok-2'))
+              .thenAnswer((_) async => null);
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer((_) async => http.Response('', 401));
+
+          await expectLater(
+            httpService.get(url),
+            throwsA(isA<HttpException>()
+                .having((e) => e.response.statusCode, 'statusCode', 401)),
+          );
+
+          verify(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .called(2);
+          expect(
+            verify(tokens().refreshAfterUnauthorized(captureAny)).captured,
+            ['tok-1', 'tok-2'],
+          );
+        });
+
+        test('an unauthenticated request asks the provider for no token',
+            () async {
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer((_) async => http.Response('{}', 200));
+
+          await httpService.get(url, requireAuth: false);
+
+          verifyNever(tokens().accessToken());
+          final headers = verify(
+                  mockHttpClient.get(any, headers: captureAnyNamed('headers')))
+              .captured
+              .single as Map<String, String>;
+          expect(headers, {'Accept': 'application/json'});
+        });
+
+        test(
+            'an unauthenticated 401 is thrown as an exception that needed no token',
+            () async {
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer(
+                  (_) async => http.Response('{"reason":"unauthorized"}', 401));
+
+          await expectLater(
+            httpService.get(url, requireAuth: false),
+            throwsA(isA<HttpException>()
+                .having((e) => e.response.statusCode, 'statusCode', 401)
+                .having((e) => e.requireAuth, 'requireAuth', false)),
+          );
+
+          verifyNever(tokens().accessToken());
+          verifyNever(tokens().refreshAfterUnauthorized(any));
+        });
+
+        test('a 429 is retried after retry-after', () async {
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer(inOrder([
+            http.Response('', 429, headers: {'retry-after': '0'}),
+            http.Response('{}', 200),
+          ]));
+
+          final response = await httpService.get(url, requireAuth: false);
+
+          expect(response.statusCode, 200);
+          verify(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .called(2);
+        });
+
+        test('a multipart upload is sent once even after a 401', () async {
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(tokens().refreshAfterUnauthorized('tok-1'))
+              .thenAnswer((_) async => 'tok-2');
+          when(mockHttpClient.send(any)).thenAnswer((_) async =>
+              http.StreamedResponse(const Stream<List<int>>.empty(), 401));
+
+          await expectLater(
+            httpService.postMultipart(
+              url,
+              files: [http.MultipartFile.fromString('f', 'x')],
+            ),
+            throwsA(isA<HttpException>()
+                .having((e) => e.response.statusCode, 'statusCode', 401)),
+          );
+
+          final sent = verify(mockHttpClient.send(captureAny)).captured;
+          expect(sent, hasLength(1));
+          expect((sent.single as http.BaseRequest).headers['Authorization'],
+              'Bearer tok-1');
+          expect(
+            verify(tokens().refreshAfterUnauthorized(captureAny)).captured,
+            ['tok-1'],
+          );
+        });
+
+        test('an error from accessToken reaches the caller', () async {
+          final error = StateError('locked');
+          when(tokens().accessToken()).thenAnswer((_) async => throw error);
+
+          await expectLater(httpService.get(url), throwsA(same(error)));
+
+          verifyNever(mockHttpClient.get(any, headers: anyNamed('headers')));
+        });
+
+        test('an error from refreshAfterUnauthorized reaches the caller',
+            () async {
+          final error = StateError('locked');
+          when(tokens().accessToken()).thenAnswer((_) async => 'tok-1');
+          when(tokens().refreshAfterUnauthorized(any))
+              .thenAnswer((_) async => throw error);
+          when(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .thenAnswer((_) async => http.Response('', 401));
+
+          await expectLater(httpService.get(url), throwsA(same(error)));
+
+          verify(mockHttpClient.get(any, headers: anyNamed('headers')))
+              .called(1);
+        });
       });
     });
 

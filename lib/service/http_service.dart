@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
-import 'package:oauth2/oauth2.dart' as oauth2;
 
-import '../model/error_models.dart';
 import '../utils.dart';
 import 'auth_service.dart';
 
@@ -15,7 +12,10 @@ import 'auth_service.dart';
 class HttpException implements Exception {
   final http.Response response;
 
-  HttpException(this.response);
+  /// Whether the call needed a token.
+  final bool requireAuth;
+
+  HttpException(this.response, {this.requireAuth = false});
 
   @override
   String toString() {
@@ -44,7 +44,7 @@ class ClientNetworkException implements Exception {
 /// for the `ApiClient` to consume. It also implements a retry mechanism for
 /// transient errors like rate limiting (HTTP 429).
 class HttpService {
-  final AuthService _authService;
+  final AccessTokenProvider _tokens;
   final http.BaseClient _standardClient;
 
   final _logger = useLogger('Http');
@@ -54,66 +54,13 @@ class HttpService {
   static const int _maxRetries = 3;
   static const Duration _baseRetryDelay = Duration(seconds: 2);
 
-  HttpService(this._authService, this._standardClient);
-
-  Future<oauth2.Client> _getAuthenticatedClient() async {
-    try {
-      return await _authService.getAuthenticatedClient();
-    } on AuthError catch (e) {
-      final detail = e.message ?? e.runtimeType.toString();
-      switch (e) {
-        case NoSessionStored():
-          _logger.debug(
-            'Authentication skipped while preparing request: no stored session.',
-          );
-        case SessionExpired():
-        case LoggedOut():
-          _logger.warning(
-            'Authentication failed while preparing request: $detail',
-          );
-        default:
-          _logger.error(
-            'Authentication failed while preparing request: $detail',
-            e,
-          );
-      }
-      final problem = HttpProblem(
-        type: 'about:blank',
-        title: 'Authentication Error',
-        status: 401,
-        detail: detail,
-      );
-      final problemJson = jsonEncode({
-        'type': problem.type,
-        'title': problem.title,
-        'status': problem.status,
-        'detail': problem.detail,
-        'instance': problem.instance,
-        'details': problem.details,
-      });
-      throw HttpException(
-        http.Response(
-          problemJson,
-          401,
-          headers: {'Content-Type': 'application/problem+json; charset=utf-8'},
-        ),
-      );
-    }
-  }
-
-  /// Retrieves a valid bearer access token, refreshing it if necessary.
-  /// Throws an [HttpException] if a valid token cannot be obtained.
-  Future<String> getBearerToken() async {
-    final client = await _getAuthenticatedClient();
-    return client.credentials.accessToken;
-  }
+  HttpService(this._tokens, this._standardClient);
 
   Future<http.BaseClient> _selectClient({required bool requireAuth}) async {
     if (requireAuth) {
-      return await _getAuthenticatedClient();
-    } else {
-      return _standardClient;
+      throw UnimplementedError('not implemented');
     }
+    return _standardClient;
   }
 
   Map<String, String> _mergeHeaders({
@@ -136,31 +83,10 @@ class HttpService {
     required Uri url,
     required bool requireAuth,
   }) async {
-    bool hasAttemptedAuthRefresh = false;
-
     for (var i = 0; i < _maxRetries; i++) {
       try {
         final client = await _selectClient(requireAuth: requireAuth);
         final response = await requestBuilder(client).timeout(_requestTimeout);
-
-        // Isolate 401 handling from standard 429/network retries
-        if (response.statusCode == 401 &&
-            requireAuth &&
-            !hasAttemptedAuthRefresh) {
-          _logger.warning(
-              'Received 401 for $url. Attempting forced token refresh...');
-          hasAttemptedAuthRefresh = true;
-          try {
-            await _authService.forceRefresh();
-            i--; // Do not consume a retry budget for an auth refresh
-            continue;
-          } on AuthError catch (e) {
-            _logger.error('Session refresh failed after 401: ${e.message}');
-            // Catch fatal refresh failures and wrap as 401 to trigger ApiErrorHandler logout
-            throw HttpException(
-                http.Response('Session refresh failed: ${e.message}', 401));
-          }
-        }
 
         _logResponse(response);
         _checkResponseStatus(response);
@@ -173,20 +99,6 @@ class HttpService {
         );
         // Do not retry on timeout, throw immediately.
         throw ClientNetworkException(e);
-      } on oauth2.AuthorizationException catch (e, s) {
-        _logger.error(
-          'Caught AuthorizationException on $method. Session is unrecoverable.',
-          e,
-          s,
-        );
-        // Do not retry, this is a final auth failure.
-        throw HttpException(
-          http.Response(
-            'Authorization failed after refresh attempt.',
-            401,
-            request: http.Request(method, url),
-          ),
-        );
       } on http.ClientException catch (e, s) {
         _logger.error(
           'HttpService $method Error: Network/ClientException for $url',

@@ -1,7 +1,7 @@
 // Test Plan:
 //
 // group: 'State Transition and Controller Lifecycle'
-//   - test: should preserve the original navigation request while auth state is Loading
+//   - test: should preserve the original navigation request while auth state is unknown
 //   - test: should set modalConfiguration and preserve baseConfiguration when a modal route is requested
 //   - test: should create a new base controller when the base configuration changes
 //   - test: should dispose the old base controller when the base configuration changes
@@ -9,14 +9,14 @@
 //   - test: should dispose the modal controller when navigating away from a modal
 //
 // group: 'Error Handling'
-//   - test: should set an ErrorRoute configuration for unhandled AuthErrors
+//   - test: an error on the auth stream shows the session error page
+//   - test: while auth is unknown the base content is the loading scaffold
 //   - test: should default to a known good route if the delegate returns null for a base configuration
 
 import 'package:boundary/controller.dart';
 import 'package:boundary/route_table.dart';
 import 'package:boundary/router.dart';
 import 'package:boundary/service/auth_service.dart';
-import 'package:boundary/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -66,7 +66,8 @@ class CountingBinding<R extends ConfigurationBase> {
 }
 
 CountingBinding<FakeBaseRoute> baseBinding(Controller controller) =>
-    CountingBinding(FakeBaseRoute().pathTemplate, FakeBaseRoute.new, controller);
+    CountingBinding(
+        FakeBaseRoute().pathTemplate, FakeBaseRoute.new, controller);
 
 CountingBinding<FakeOtherBaseRoute> otherBaseBinding(Controller controller) =>
     CountingBinding(
@@ -79,7 +80,7 @@ CountingBinding<FakeModalRoute> modalBinding(Controller controller) =>
 void main() {
   group('AppCoordinator Lifecycle and Error Handling', () {
     late MockDependencyProvider provider;
-    late BehaviorSubject<AsyncResult<User>> authStreamController;
+    late BehaviorSubject<AuthState> authStreamController;
     late BehaviorSubject<ConfigurationBase> navStreamController;
 
     setUp(() async {
@@ -90,7 +91,7 @@ void main() {
       navStreamController = BehaviorSubject();
 
       // Default stubbing to use the controllers
-      when(provider.mockAuthService.userStream)
+      when(provider.mockAuthService.authState)
           .thenAnswer((_) => authStreamController.stream);
       when(provider.mockNavigationService.routeRequestStream)
           .thenAnswer((_) => navStreamController.stream);
@@ -103,11 +104,11 @@ void main() {
 
     group('State Transition and Controller Lifecycle', () {
       test(
-        'should preserve the original navigation request while auth state is Loading',
+        'should preserve the original navigation request while auth state is unknown',
         () async {
           // Arrange
           final routeRequest = FakeBaseRoute();
-          authStreamController.add(const Loading());
+          authStreamController.add(const AuthUnknown());
           when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
             baseBinding(provider.mockController).binding,
           ]);
@@ -129,7 +130,7 @@ void main() {
           // Arrange
           final baseRoute = FakeBaseRoute();
           final modalRoute = FakeModalRoute();
-          authStreamController.add(Data(ModelFactory.createUser()));
+          authStreamController.add(Authenticated(ModelFactory.createSession()));
           when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
             baseBinding(provider.mockController).binding,
             modalBinding(MockController()).binding,
@@ -158,7 +159,7 @@ void main() {
           final routeB = FakeOtherBaseRoute();
           final bindingA = baseBinding(provider.mockController);
           final bindingB = otherBaseBinding(MockController());
-          authStreamController.add(Data(ModelFactory.createUser()));
+          authStreamController.add(Authenticated(ModelFactory.createSession()));
 
           when(provider.mockAppCoordinatorDelegate.routes)
               .thenReturn([bindingA.binding, bindingB.binding]);
@@ -185,7 +186,7 @@ void main() {
           final routeB = FakeOtherBaseRoute();
           final controllerA = MockController();
           final controllerB = MockController();
-          authStreamController.add(Data(ModelFactory.createUser()));
+          authStreamController.add(Authenticated(ModelFactory.createSession()));
 
           when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
             baseBinding(controllerA).binding,
@@ -213,7 +214,7 @@ void main() {
           final baseRoute = FakeBaseRoute();
           final modalRoute = FakeModalRoute();
           final modalController = MockController();
-          authStreamController.add(Data(ModelFactory.createUser()));
+          authStreamController.add(Authenticated(ModelFactory.createSession()));
 
           final modalBindingUnderTest = modalBinding(modalController);
           when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
@@ -242,7 +243,7 @@ void main() {
           final modalRoute = FakeModalRoute();
           final nextBaseRoute = FakeOtherBaseRoute();
           final modalController = MockController();
-          authStreamController.add(Data(ModelFactory.createUser()));
+          authStreamController.add(Authenticated(ModelFactory.createSession()));
 
           when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
             baseBinding(provider.mockController).binding,
@@ -269,11 +270,12 @@ void main() {
 
     group('Error Handling', () {
       test(
-        'should set an ErrorRoute configuration for unhandled AuthErrors',
+        'an error on the auth stream shows the session error page',
         () async {
           // Arrange
-          authStreamController
-              .add(const Failure(TokenVerificationFailed(message: 'test')));
+          authStreamController.addError(StateError('broken'));
+          when(provider.mockAppCoordinatorDelegate.getLoginRoute())
+              .thenReturn(FakeBaseRoute());
           when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
             baseBinding(provider.mockController).binding,
           ]);
@@ -289,6 +291,39 @@ void main() {
           expect(route, isA<ErrorRoute>());
           expect((route as ErrorRoute).isSessionTermination, isTrue);
           expect(route.message, 'error.session.unexpected');
+        },
+      );
+
+      test(
+        'while auth is unknown the base content is the loading scaffold',
+        () async {
+          // Arrange
+          var errorControllersCreated = 0;
+          authStreamController.add(const AuthUnknown());
+          when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+            baseBinding(provider.mockController).binding,
+            RouteBinding<ErrorRoute, Controller>(
+              path: ErrorRoute.path,
+              parse: (p) => ErrorRoute(message: p['message'] ?? ''),
+              controller: (_) {
+                errorControllersCreated++;
+                return provider.mockController;
+              },
+              page: const SizedBox(),
+            ),
+          ]);
+
+          // Act
+          final coordinator =
+              SutFactory.createAppCoordinator(provider: provider);
+          await Future.delayed(Duration.zero);
+          final content = coordinator.getBaseContentWidget();
+
+          // Assert
+          expect(content, isA<Scaffold>());
+          expect(
+              content.key, const ValueKey('AppCoordinatorLoadingBase-Generic'));
+          expect(errorControllersCreated, 0);
         },
       );
     });

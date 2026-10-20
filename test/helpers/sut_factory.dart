@@ -43,7 +43,7 @@ class SutFactory {
 
   /// Creates an [HttpService] instance with its dependencies resolved.
   ///
-  /// By default, it uses a mock [AuthService].
+  /// By default, it uses a mock [AuthService] as the token provider.
   /// A custom [MockDependencyProvider] can be passed in to override
   /// the default mock behavior for specific test cases.
   static HttpService createHttpService({MockDependencyProvider? provider}) {
