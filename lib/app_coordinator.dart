@@ -66,7 +66,11 @@ class AppCoordinator extends ChangeNotifier {
   }
   void _setupServicesAndControllers() {
     injector.addSingleton(
-        () => NavigationService(delegate: _delegate, routes: routeTable));
+        () => NavigationService(
+              delegate: _delegate,
+              routes: routeTable,
+              redirectStore: _delegate.createPostAuthRedirectStore(),
+            ));
     injector.addSingleton<BaseClient>(Client.new);
     injector.addSingleton<HttpService>(() =>
         HttpService(injector.get<AuthService>(), injector.get<BaseClient>()));

@@ -1,7 +1,4 @@
-import 'dart:convert' show jsonDecode, jsonEncode;
-
 import 'package:rxdart/rxdart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../route_table.dart';
 import '../router.dart';
@@ -15,8 +12,7 @@ class NavigationService {
   final NavigationServiceDelegate _delegate;
   final RouteTable _routes;
 
-  static const String _postAuthRedirectKey = 'post_auth_redirect_intent';
-  static const int _redirectIntentLifetimeMinutes = 5;
+  final PostAuthRedirectStore _redirectStore;
 
   final _routeRequest$ = BehaviorSubject<ConfigurationBase?>();
   final _baseRoute$ = BehaviorSubject<ConfigurationBase?>.seeded(null);
@@ -49,87 +45,37 @@ class NavigationService {
     required RouteTable routes,
     PostAuthRedirectStore? redirectStore,
   })  : _delegate = delegate,
-        _routes = routes {
+        _routes = routes,
+        _redirectStore = redirectStore ?? InMemoryPostAuthRedirectStore() {
     _logger.verbose(
       "NavigationService initialized with ${_routes.bindings.length} routes",
     );
   }
 
-  /// Asynchronously stores the provided [configuration] URI and a timestamp
-  /// in SharedPreferences. This is intended to persist a navigation request
-  /// across an external authentication redirect.
+  /// Keeps [configuration]'s URI in the redirect store, so a navigation
+  /// request can survive sign-in.
   Future<void> setPostAuthRedirect(ConfigurationBase configuration) async {
-    final prefs = await SharedPreferences.getInstance();
-    final intent = {
-      'uri': configuration.uri.toString(),
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-    await prefs.setString(_postAuthRedirectKey, jsonEncode(intent));
-    _logger.info('Saved post-auth redirect intent: ${intent['uri']}');
+    await _redirectStore.save(configuration.uri);
+    _logger.info('Saved post-auth redirect intent: ${configuration.uri}');
   }
 
-  /// Asynchronously reads, validates, and consumes a stored post-authentication
-  /// redirect intent from SharedPreferences.
-  ///
-  /// This method reads the intent, immediately deletes it to ensure it's
-  /// single-use, validates its timestamp, and then parses the URI back into
-  /// a `ConfigurationBase` object.
+  /// Takes the saved redirect, once, and parses it with the route table.
+  /// Returns null when nothing is saved or the saved route is the home path.
   Future<ConfigurationBase?> consumePostAuthRedirect() async {
-    final prefs = await SharedPreferences.getInstance();
-    final intentJson = prefs.getString(_postAuthRedirectKey);
-
-    if (intentJson == null) {
+    final uri = await _redirectStore.take();
+    if (uri == null) return null;
+    if (uri.path == '/') {
+      _logger.info('Attempted to go HomeRoute from Post login flow');
       return null;
     }
-
-    // CRITICAL: Immediately delete the key to ensure it is only ever consumed once.
-    await prefs.remove(_postAuthRedirectKey);
-    _logger.verbose('Consumed and removed post-auth redirect key.');
-
-    try {
-      final intent = jsonDecode(intentJson);
-      final uriString = intent['uri'] as String?;
-      final timestampMillis = intent['timestamp'] as int?;
-
-      if (uriString == null || timestampMillis == null) {
-        _logger.warning('Stored redirect intent is malformed.');
-        return null;
-      }
-
-      final storedTime = DateTime.fromMillisecondsSinceEpoch(timestampMillis);
-      final expiryTime = storedTime.add(
-        const Duration(minutes: _redirectIntentLifetimeMinutes),
-      );
-
-      if (DateTime.now().isAfter(expiryTime)) {
-        _logger.warning(
-          'Stored redirect intent has expired (stored: $storedTime). Ignoring.',
-        );
-        return null;
-      }
-
-      if (uriString == '/') {
-        _logger.info('Attempted to go HomeRoute from Post login flow');
-        // Return null if the previous tried is '/', which is home, then we default to nothing.
-        return null;
-      }
-
-      _logger.info('Found fresh, valid post-auth redirect to: $uriString');
-      return _routes.parse(Uri.parse(uriString));
-    } catch (e, s) {
-      _logger.error('Failed to parse or validate post-auth intent', e, s);
-      return null;
-    }
+    _logger.info('Found post-auth redirect to: $uri');
+    return _routes.parse(uri);
   }
 
-  /// Asynchronously clears any stored post-authentication redirect intent.
-  /// This should be called on explicit logout to clean up state.
+  /// Forgets any saved post-authentication redirect. Call it on sign-out.
   Future<void> clearPostAuthRedirect() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey(_postAuthRedirectKey)) {
-      await prefs.remove(_postAuthRedirectKey);
-      _logger.info('Cleared post-authentication redirect intent on logout.');
-    }
+    await _redirectStore.clear();
+    _logger.info('Cleared post-authentication redirect intent.');
   }
 
   void retryLastNavigation() {

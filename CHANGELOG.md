@@ -65,6 +65,15 @@
 *   Removed: `HttpService.getBearerToken`.
 
 
+*   `StoredTokenAuthService<C>` is an `AuthService` for a long-lived token: the app supplies the login call and a `CredentialStore`; a stored token means signed in at start, and the first 401 signs out.
+*   `TokenGrant` is what the app's login call returns: a token and an optional subject.
+*   `CredentialStore` keeps one string for `StoredTokenAuthService`; the app supplies a secure one.
+*   `SharedPreferencesCredentialStore` is a `CredentialStore` in SharedPreferences. It is not secure; use it for development and tests.
+*   `PostAuthRedirectStore` and `InMemoryPostAuthRedirectStore` keep the post-auth redirect; in memory by default.
+*   `NavigationService(redirectStore:)` takes the redirect store; null means in memory.
+*   `AppCoordinatorDelegate.createPostAuthRedirectStore()` supplies the store `NavigationService` uses.
+*   `NavigationService` no longer keeps the post-auth redirect in SharedPreferences under `post_auth_redirect_intent`, and the 5-minute expiry is removed.
+
 ## 0.4.1
 
 ### Improvements & Bug Fixes
