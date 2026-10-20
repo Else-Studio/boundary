@@ -7,6 +7,7 @@ import '../route_table.dart';
 import '../router.dart';
 import '../utils.dart';
 import '../app_coordinator_delegate.dart';
+import 'post_auth_redirect_store.dart';
 
 /// Captures navigation requests (intentions) and emits the requested route configuration.
 class NavigationService {
@@ -46,6 +47,7 @@ class NavigationService {
   NavigationService({
     required NavigationServiceDelegate delegate,
     required RouteTable routes,
+    PostAuthRedirectStore? redirectStore,
   })  : _delegate = delegate,
         _routes = routes {
     _logger.verbose(

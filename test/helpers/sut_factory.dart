@@ -5,6 +5,7 @@ import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/service/http_service.dart';
 import 'package:boundary/service/locale_service.dart';
 import 'package:boundary/service/navigation_service.dart';
+import 'package:boundary/service/stored_token_auth_service.dart';
 
 import 'mock_dependency_provider.dart';
 
@@ -51,6 +52,19 @@ class SutFactory {
     return HttpService(
       effectiveProvider.mockAuthService,
       effectiveProvider.mockHttpClient,
+    );
+  }
+
+  /// Creates a [StoredTokenAuthService] around the given fakes.
+  static StoredTokenAuthService<C> createStoredTokenAuthService<C>({
+    required Future<TokenGrant> Function(C credentials) login,
+    required CredentialStore store,
+    Future<void> Function(String token)? logout,
+  }) {
+    return StoredTokenAuthService<C>(
+      login: login,
+      store: store,
+      logout: logout,
     );
   }
 

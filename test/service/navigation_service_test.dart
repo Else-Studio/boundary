@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:boundary/boundary.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -248,15 +246,12 @@ void main() {
 
   group('stored post-auth redirect', () {
     Future<ConfigurationBase?> consumeStored(String uri) async {
-      SharedPreferences.setMockInitialValues({
-        'post_auth_redirect_intent': jsonEncode({
-          'uri': uri,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-        }),
-      });
+      final store = InMemoryPostAuthRedirectStore();
+      await store.save(Uri.parse(uri));
       final service = NavigationService(
         delegate: const _TestDelegate(_TestRoute('/login')),
         routes: RouteTable([_caseBinding]),
+        redirectStore: store,
       );
       try {
         return await service.consumePostAuthRedirect();
@@ -276,6 +271,44 @@ void main() {
       final route = await consumeStored('/cases/abc');
 
       expect(route, const NotFoundRoute('/cases/abc'));
+    });
+
+    test('a stored root redirect gives no route', () async {
+      expect(await consumeStored('/'), isNull);
+    });
+
+    test('the default redirect is kept in memory and taken once', () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: RouteTable([_caseBinding]),
+      );
+
+      await service.setPostAuthRedirect(const _CaseRoute(7));
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getKeys(), isEmpty);
+
+      expect(await service.consumePostAuthRedirect(), const _CaseRoute(7));
+      expect(await service.consumePostAuthRedirect(), isNull);
+      expect(prefs.getKeys(), isEmpty);
+      service.dispose();
+    });
+
+    test('clearing forgets the redirect', () async {
+      final store = InMemoryPostAuthRedirectStore();
+      final service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: RouteTable([_caseBinding]),
+        redirectStore: store,
+      );
+
+      await service.setPostAuthRedirect(const _CaseRoute(7));
+      await service.clearPostAuthRedirect();
+
+      expect(await store.take(), isNull);
+
+      expect(await service.consumePostAuthRedirect(), isNull);
+      service.dispose();
     });
   });
 
