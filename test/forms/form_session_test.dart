@@ -77,6 +77,7 @@ void main() {
     try {
       session.dispose();
     } catch (_) {}
+    fixture = FormFixture();
     statuses = <SaveStatus>[];
     session = createSession(debounceTime: const Duration(milliseconds: 200));
     session.status.listen(statuses.add);
