@@ -10,7 +10,10 @@ void initializeCoreMappers() {
   ViolationMapper.ensureInitialized();
 }
 
-@MappableClass(discriminatorKey: 'type')
+@MappableClass(
+  discriminatorKey: 'type',
+  hook: UnmappedPropertiesHook('extensions'),
+)
 class HttpProblem with HttpProblemMappable {
   final String? type;
   final String? title;

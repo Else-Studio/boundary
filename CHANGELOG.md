@@ -1,5 +1,13 @@
 ## 0.5.0 (unreleased)
 
+*   `Notice`, `NoticeLevel` and `NoticeService` are new: a broadcast stream of notices for the UI.
+*   `NoticeSnackBarListener` shows each notice as a `SnackBar` through the nearest `ScaffoldMessenger`.
+*   `ErrorPolicy.handle` turns an error into a notice, a page when `pageFor` returns one, or nothing for `SessionTerminatedException`.
+*   `PolicyErrors` mixin sends a controller's `onError` through `ErrorPolicy`.
+*   `AppCoordinatorDelegate.createErrorPolicy` supplies the `ErrorPolicy` the coordinator registers with `NoticeService`.
+*   `AsyncResultBuilder` renders an `AsyncResult` stream (loading, data, failure, empty).
+*   `HttpProblem.extensions` keeps problem+json members the model does not name.
+*   `CredentialsRejectedException` is a 401 on a call that needed no token; `requireAuth: true` still yields `SessionTerminatedException`.
 *   `Error<T>` is now `Failure<T>`, so `dart:core` `Error` is no longer shadowed.
 *   `boundaryLogLevel` and `export LogLevel` added: tests and apps set the lowest level `useLogger` prints; quiet loggers still drop verbose and debug.
 *   `router.dart` uses `onDidRemovePage` in place of the deprecated `onPopPage`; system back on a modal still calls `dismissModal()`.

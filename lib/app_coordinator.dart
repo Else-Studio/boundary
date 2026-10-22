@@ -6,6 +6,7 @@ import 'package:rxdart/rxdart.dart';
 import 'app_coordinator_delegate.dart';
 import 'controller.dart';
 import 'model/error_models.dart';
+import 'notice.dart';
 import 'route_table.dart';
 import 'router.dart';
 import 'service/auth_service.dart';
@@ -65,12 +66,19 @@ class AppCoordinator extends ChangeNotifier {
     authService.initialize();
   }
   void _setupServicesAndControllers() {
+    injector.addSingleton(() => NoticeService());
     injector.addSingleton(
         () => NavigationService(
               delegate: _delegate,
               routes: routeTable,
               redirectStore: _delegate.createPostAuthRedirectStore(),
             ));
+    injector.addSingleton(
+      () => _delegate.createErrorPolicy(
+        injector.get<NoticeService>(),
+        injector.get<NavigationService>(),
+      ),
+    );
     injector.addSingleton<BaseClient>(Client.new);
     injector.addSingleton<HttpService>(() =>
         HttpService(injector.get<AuthService>(), injector.get<BaseClient>()));

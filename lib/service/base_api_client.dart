@@ -202,7 +202,10 @@ abstract class BaseApiClient with ApiUriBuilder {
 
     switch (e.response.statusCode) {
       case 401:
-        return SessionTerminatedException(problem: problem);
+        if (e.requireAuth) {
+          return SessionTerminatedException(problem: problem);
+        }
+        return CredentialsRejectedException(problem: problem);
       case 403:
         return ForbiddenException(problem: problem);
       case 404:

@@ -77,6 +77,8 @@ class HttpProblemMapper extends ClassMapperBase<HttpProblem> {
     #extensions: _f$extensions,
   };
 
+  @override
+  final MappingHook hook = const UnmappedPropertiesHook('extensions');
   static HttpProblem _instantiate(DecodingData data) {
     return HttpProblem(
       type: data.dec(_f$type),
@@ -455,6 +457,9 @@ class HttpValidationProblemMapper
   @override
   late final ClassMapperBase superMapper =
       HttpProblemMapper.ensureInitialized();
+
+  @override
+  final MappingHook superHook = const UnmappedPropertiesHook('extensions');
 
   static HttpValidationProblem _instantiate(DecodingData data) {
     return HttpValidationProblem(

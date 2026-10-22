@@ -21,7 +21,7 @@ class Notice {
 
 class NoticeService {
   final StreamController<Notice> _controller =
-      StreamController<Notice>.broadcast();
+      StreamController<Notice>.broadcast(sync: true);
 
   /// Broadcast; a listener gets only notices shown after it subscribed.
   Stream<Notice> get notices => _controller.stream;
@@ -48,6 +48,42 @@ class NoticeSnackBarListener extends StatefulWidget {
 }
 
 class _NoticeSnackBarListenerState extends State<NoticeSnackBarListener> {
+  StreamSubscription<Notice>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribe();
+  }
+
+  @override
+  void didUpdateWidget(NoticeSnackBarListener oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notices != widget.notices) {
+      _subscription?.cancel();
+      _subscribe();
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  void _subscribe() {
+    _subscription = widget.notices.listen((notice) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text(notice.message)),
+        );
+    });
+  }
+
   @override
   Widget build(BuildContext context) => widget.child;
 }
