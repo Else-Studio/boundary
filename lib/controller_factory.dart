@@ -19,5 +19,7 @@ void addControllerFactory<C extends Controller>(
   AutoInjector injector,
   C Function(AutoInjector injector) create,
 ) {
-  throw UnimplementedError('not implemented');
+  injector.addInstance<ControllerFactory<C>>(
+    ControllerFactory<C>(() => create(injector)),
+  );
 }

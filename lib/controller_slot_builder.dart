@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'controller.dart';
@@ -22,5 +23,23 @@ class ControllerSlotBuilder<C extends Controller> extends StatelessWidget {
   final WidgetBuilder? empty;
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    return StreamBuilder<C?>(
+      initialData: stream.value,
+      stream: stream,
+      builder: (context, snapshot) {
+        final child = snapshot.data;
+        if (child == null) {
+          return (empty ?? (_) => const SizedBox.shrink())(context);
+        }
+        return Provider<C>.value(
+          value: child,
+          child: KeyedSubtree(
+            key: ObjectKey(child),
+            child: builder(context, child),
+          ),
+        );
+      },
+    );
+  }
 }

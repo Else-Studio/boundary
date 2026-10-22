@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 
-import 'controller_slot.dart';
 import 'router.dart';
 import 'utils.dart';
+
+part 'controller_slot.dart';
 
 /// A route controller that stays alive when its route type returns with
 /// different params. (Was RouteAware.)
@@ -29,6 +30,9 @@ abstract class Controller<A> {
 
   // Release closures for owned resources, in registration order.
   final List<FutureOr<void> Function()> _releasers = [];
+
+  /// Parent set by [adopt] or by a [ControllerSlot]; separate from ownership.
+  Controller? _parent;
 
   bool _isDisposed = false;
 
@@ -79,6 +83,11 @@ abstract class Controller<A> {
   /// Never rethrow from here.
   @protected
   void onError(Object error, StackTrace stackTrace) {
+    final parent = _parent;
+    if (parent != null && !_isDisposed) {
+      parent.onError(error, stackTrace);
+      return;
+    }
     appLogger.error(
       'Unhandled error in $runtimeType action: $error',
       error,
@@ -93,7 +102,15 @@ abstract class Controller<A> {
   /// parent.
   @protected
   C adopt<C extends Controller>(C child) {
-    throw UnimplementedError('not implemented');
+    if (identical(child, this)) {
+      throw StateError('A controller cannot adopt itself.');
+    }
+    if (child._parent != null) {
+      throw StateError('Controller already has a parent.');
+    }
+    child._parent = this;
+    own(child);
+    return child;
   }
 
   /// A slot for zero or one keyed child at a time, released with this
@@ -101,7 +118,9 @@ abstract class Controller<A> {
   /// but the slot, not this controller, disposes it.
   @protected
   ControllerSlot<K, C> slot<K, C extends Controller>(C Function(K key) create) {
-    throw UnimplementedError('not implemented');
+    final slot = ControllerSlot<K, C>._(this, create);
+    own(slot);
+    return slot;
   }
 
   /// Listens to [stream] until dispose. Each event goes to [onData]; a sync
@@ -112,7 +131,23 @@ abstract class Controller<A> {
     Stream<T> stream,
     FutureOr<void> Function(T event) onData,
   ) {
-    throw UnimplementedError('not implemented');
+    final subscription = stream.listen(
+      (event) {
+        try {
+          final result = onData(event);
+          if (result is Future) {
+            result.then<void>((_) {}, onError: _report);
+          }
+        } catch (e, s) {
+          _report(e, s);
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        onError(error, stackTrace);
+      },
+      cancelOnError: false,
+    );
+    return own(subscription);
   }
 
   /// Registers [resource] to be released by [dispose], and returns it.
@@ -124,6 +159,7 @@ abstract class Controller<A> {
   /// - [CompositeSubscription]: `dispose()`
   /// - [Controller]: `dispose()`
   /// - [ChangeNotifier] (TextEditingController, FocusNode, ...): `dispose()`
+  /// - [ControllerSlot]: disposes the current child and closes the stream
   ///
   /// Any other type throws [ArgumentError]. Called after [dispose], it
   /// releases [resource] at once and returns it.
@@ -137,6 +173,7 @@ abstract class Controller<A> {
       Timer() => resource.cancel,
       Controller() => resource.dispose,
       ChangeNotifier() => resource.dispose,
+      ControllerSlot() => resource._release,
       _ => throw ArgumentError.value(
         resource,
         'resource',

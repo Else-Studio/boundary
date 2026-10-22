@@ -36,7 +36,13 @@
 *   `NavigationService({required delegate, required routes})` parses the stored post-auth redirect with the `RouteTable`.
 *   `RouteTable` appends `defaultErrorRouteBinding` and `defaultNotFoundRouteBinding` for the `ErrorRoute` and `NotFoundRoute` an app does not bind; `DefaultPageController`, `DefaultErrorPage` and `DefaultNotFoundPage` are exported from `boundary.dart`.
 *   Removed: `NavigationServiceDelegate.parseUri`, `AppCoordinatorDelegate.createControllerForConfiguration` and `AppCoordinatorDelegate.mapControllerToWidget`.
-*   `RouteAware<R>` controllers get `update(route)` when their route type returns with different params and are kept; other controllers are recreated.
+*   `RouteUpdatable<R>` (was `RouteAware`) controllers get `update(route)` when their route type returns with different params and are kept; other controllers are recreated.
+*   `Controller.adopt(child)` sets the parent and owns the child for disposal with the parent.
+*   `Controller.slot` and `ControllerSlot` hold zero or one keyed child at a time; the slot disposes replaced children.
+*   `ControllerSlotBuilder` builds the current slot child under `Provider` and an `ObjectKey`.
+*   `ControllerFactory` and `addControllerFactory` register one create-function per child type in the injector.
+*   `Controller.listenTo(stream, onData)` owns the subscription and routes handler and stream errors to `onError`.
+*   A living adopted or slotted child's default `onError` forwards to its parent; an error after the child is disposed is logged.
 *   `NavigationService.baseRouteStream` and `modalRouteStream` stream the resolved routes, after redirects.
 *   `NavigationService.onRouteResolved` is called by `AppCoordinator` each time what it shows changes.
 *   `RouteAccess` (`public`, `guestOnly`, `protected`) is new; `RouteBinding.access` sets it, and defaults to `protected`.

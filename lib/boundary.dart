@@ -1,6 +1,5 @@
 export 'controller.dart';
 export 'controller_factory.dart';
-export 'controller_slot.dart';
 export 'controller_slot_builder.dart';
 export 'app_coordinator.dart';
 export 'app_coordinator_delegate.dart';
