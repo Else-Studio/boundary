@@ -60,6 +60,8 @@ class MockDependencyProvider {
     when(mockNavigationService.navigateTo(any)).thenAnswer((_) async {});
     when(mockNavigationService.consumePostAuthRedirect())
         .thenAnswer((_) async => null);
+    when(mockNavigationService.hasLeaveGuards).thenReturn(false);
+    when(mockNavigationService.hasUnsavedChanges).thenReturn(false);
 
     // --- HttpClient ---
     // By default, all requests are successful with an empty JSON body.

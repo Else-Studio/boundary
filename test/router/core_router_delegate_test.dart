@@ -250,5 +250,24 @@ void main() {
       verify(provider.mockNavigationService.dismissModal()).called(1);
       verifyNever(provider.mockNavigationService.navigateUp());
     });
+
+    testWidgets(
+        'system back with a guarded modal goes through NavigationService',
+        (tester) async {
+      when(provider.mockNavigationService.hasLeaveGuards).thenReturn(true);
+      when(provider.mockNavigationService.navigateUp()).thenReturn(true);
+      await emit(tester, FakeCaseDetailRoute());
+      await emit(tester, FakeNoteModalRoute());
+      await pumpRouter(tester);
+      expect(coordinator.modalConfiguration, isA<FakeNoteModalRoute>());
+
+      final handled = await delegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      verify(provider.mockNavigationService.navigateUp()).called(1);
+      verifyNever(provider.mockNavigationService.dismissModal());
+      expect(coordinator.modalConfiguration, isA<FakeNoteModalRoute>());
+    });
   });
 }

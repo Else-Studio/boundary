@@ -145,4 +145,12 @@ class SutFactory {
       onSaveError: onSaveError,
     );
   }
+
+  /// Creates a [FormLeaveGuard] around the given session and confirm callback.
+  static FormLeaveGuard createFormLeaveGuard({
+    required FormSession session,
+    required Future<bool> Function() confirm,
+  }) {
+    return FormLeaveGuard(session, confirm: confirm);
+  }
 }

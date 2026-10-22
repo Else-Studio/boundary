@@ -169,7 +169,7 @@ void main() {
           await Future.delayed(Duration.zero);
 
           // Assert
-          verify(provider.mockNavigationService.navigateTo(loginRoute))
+          verify(provider.mockNavigationService.redirectTo(loginRoute))
               .called(1);
         },
       );

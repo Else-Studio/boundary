@@ -1,7 +1,56 @@
+import 'dart:async';
+
 import 'package:boundary/boundary.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class TestGuard implements LeaveGuard {
+  TestGuard({Completer<bool>? answer, bool? fixed, this.unsaved = false})
+      : _answer = answer,
+        _fixed = fixed;
+
+  final Completer<bool>? _answer;
+  final bool? _fixed;
+  final bool unsaved;
+  int mayLeaveCalls = 0;
+
+  @override
+  bool get hasUnsavedChanges => unsaved;
+
+  @override
+  Future<bool> mayLeave() {
+    mayLeaveCalls++;
+    if (_fixed != null) return Future<bool>.value(_fixed);
+    return _answer!.future;
+  }
+}
+
+class _ThrowingGuard implements LeaveGuard {
+  @override
+  bool get hasUnsavedChanges => false;
+
+  @override
+  Future<bool> mayLeave() => throw StateError('x');
+}
+
+class _RouteA extends ConfigurationBase {
+  static const String path = '/a';
+
+  const _RouteA();
+
+  @override
+  String get pathTemplate => path;
+}
+
+class _RouteB extends ConfigurationBase {
+  static const String path = '/b';
+
+  const _RouteB();
+
+  @override
+  String get pathTemplate => path;
+}
 
 class _TestRoute extends ConfigurationBase {
   final String path;
@@ -28,6 +77,9 @@ class _CaseRoute extends ConfigurationBase {
 
   @override
   Map<String, String> get params => {'id': '$id'};
+
+  @override
+  ConfigurationBase? get parent => const _RouteA();
 }
 
 class _NoopController extends Controller<void> {
@@ -411,6 +463,250 @@ void main() {
 
       expect(service.navigateUp(), isTrue);
       expect(service.currentRequestedConfiguration, const _CasesRoute());
+    });
+  });
+
+  group('leave guards', () {
+    late NavigationService service;
+
+    RouteTable leaveRoutes() => RouteTable([
+          _bind<_RouteA>(_RouteA.path, (_) => const _RouteA(),
+              access: RouteAccess.public),
+          _bind<_RouteB>(_RouteB.path, (_) => const _RouteB(),
+              access: RouteAccess.public),
+          _caseBinding,
+          _bind<_NoteModalRoute>(
+            _NoteModalRoute.path,
+            (p) => _NoteModalRoute(int.parse(p['id']!)),
+            access: RouteAccess.public,
+          ),
+        ]);
+
+    setUp(() {
+      service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: leaveRoutes(),
+      );
+    });
+
+    tearDown(() => service.dispose());
+
+    Future<void> showBase(ConfigurationBase route) async {
+      service.navigateTo(route);
+      service.onRouteResolved(base: route, modal: null);
+    }
+
+    test('without guards navigation is immediate', () async {
+      await showBase(const _RouteA());
+
+      service.navigateTo(const _RouteB());
+
+      expect(service.currentRequestedConfiguration, const _RouteB());
+    });
+
+    test('an allowing guard lets the request through after it answers',
+        () async {
+      await showBase(const _RouteA());
+      final answer = Completer<bool>();
+      final guard = TestGuard(answer: answer);
+      service.addLeaveGuard(guard);
+
+      service.navigateTo(const _RouteB());
+
+      expect(guard.mayLeaveCalls, 1);
+      expect(service.currentRequestedConfiguration, const _RouteA());
+
+      answer.complete(true);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteB());
+    });
+
+    test('a vetoing guard keeps the page', () async {
+      await showBase(const _RouteA());
+      final emitted = <ConfigurationBase?>[];
+      service.routeRequestStream.listen(emitted.add);
+      await pumpEventQueue();
+      emitted.clear();
+
+      final answer = Completer<bool>();
+      service.addLeaveGuard(TestGuard(answer: answer));
+
+      service.navigateTo(const _RouteB());
+      answer.complete(false);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteA());
+      expect(emitted, isEmpty);
+    });
+
+    test('guards run in order and the first veto stops the rest', () async {
+      await showBase(const _RouteA());
+      final g1 = TestGuard(fixed: false);
+      final g2 = TestGuard(fixed: true);
+      service.addLeaveGuard(g1);
+      service.addLeaveGuard(g2);
+
+      service.navigateTo(const _RouteB());
+      await pumpEventQueue();
+
+      expect(g1.mayLeaveCalls, 1);
+      expect(g2.mayLeaveCalls, 0);
+      expect(service.currentRequestedConfiguration, const _RouteA());
+    });
+
+    test('a disposed registration no longer guards', () async {
+      await showBase(const _RouteA());
+      final guard = TestGuard(fixed: false);
+      final reg = service.addLeaveGuard(guard);
+      reg.dispose();
+
+      service.navigateTo(const _RouteB());
+
+      expect(service.currentRequestedConfiguration, const _RouteB());
+      expect(guard.mayLeaveCalls, 0);
+      expect(service.hasLeaveGuards, isFalse);
+    });
+
+    test('opening a modal asks no guard and closing it does', () async {
+      await showBase(const _RouteA());
+      final answer = Completer<bool>();
+      final guard = TestGuard(answer: answer);
+      service.addLeaveGuard(guard);
+
+      service.navigateTo(const _NoteModalRoute(1));
+
+      expect(guard.mayLeaveCalls, 0);
+      expect(service.currentRequestedConfiguration, const _NoteModalRoute(1));
+
+      service.onRouteResolved(
+        base: const _RouteA(),
+        modal: const _NoteModalRoute(1),
+      );
+
+      service.dismissModal();
+      expect(guard.mayLeaveCalls, 1);
+      expect(service.currentRequestedConfiguration, const _NoteModalRoute(1));
+
+      answer.complete(true);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteA());
+    });
+
+    test('navigating to the shown route asks no guard', () async {
+      await showBase(const _RouteA());
+      final guard = TestGuard(fixed: false);
+      service.addLeaveGuard(guard);
+
+      service.navigateTo(const _RouteA());
+
+      expect(guard.mayLeaveCalls, 0);
+      expect(service.currentRequestedConfiguration, const _RouteA());
+    });
+
+    test('going up returns at once and asks the guard', () async {
+      service.navigateTo(const _CaseRoute(7));
+      service.onRouteResolved(base: const _CaseRoute(7), modal: null);
+      final answer = Completer<bool>();
+      final guard = TestGuard(answer: answer);
+      service.addLeaveGuard(guard);
+
+      expect(service.navigateUp(), isTrue);
+      expect(guard.mayLeaveCalls, 1);
+      expect(service.currentRequestedConfiguration, const _CaseRoute(7));
+
+      answer.complete(true);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteA());
+    });
+
+    test('going up keeps the page when the guard vetoes', () async {
+      service.navigateTo(const _CaseRoute(7));
+      service.onRouteResolved(base: const _CaseRoute(7), modal: null);
+      final answer = Completer<bool>();
+      service.addLeaveGuard(TestGuard(answer: answer));
+
+      expect(service.navigateUp(), isTrue);
+      answer.complete(false);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _CaseRoute(7));
+    });
+
+    test('navigateBackOrLogin asks the guard before leaving', () async {
+      // Last base is /a while the coordinator is showing /cases/7, so the
+      // target is not the shown route and the guard must run.
+      service.navigateTo(const _RouteA());
+      service.onRouteResolved(base: const _CaseRoute(7), modal: null);
+      final answer = Completer<bool>();
+      final guard = TestGuard(answer: answer);
+      service.addLeaveGuard(guard);
+
+      service.navigateBackOrLogin();
+
+      expect(guard.mayLeaveCalls, 1);
+      expect(service.currentRequestedConfiguration, const _CaseRoute(7));
+
+      answer.complete(true);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteA());
+    });
+
+    test('requests during a check are dropped', () async {
+      await showBase(const _RouteA());
+      final answer = Completer<bool>();
+      final guard = TestGuard(answer: answer);
+      service.addLeaveGuard(guard);
+
+      service.navigateTo(const _RouteB());
+      service.navigateTo(const _CaseRoute(7));
+
+      expect(guard.mayLeaveCalls, 1);
+
+      answer.complete(true);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteB());
+    });
+
+    test('a throwing guard vetoes without throwing to the caller', () async {
+      final saved = boundaryLogLevel;
+      boundaryLogLevel = LogLevel.critical;
+      addTearDown(() => boundaryLogLevel = saved);
+
+      await showBase(const _RouteA());
+      service.addLeaveGuard(_ThrowingGuard());
+
+      expect(() => service.navigateTo(const _RouteB()), returnsNormally);
+      await pumpEventQueue();
+
+      expect(service.currentRequestedConfiguration, const _RouteA());
+    });
+
+    test('redirectTo skips guards', () async {
+      await showBase(const _RouteA());
+      final guard = TestGuard(fixed: false);
+      service.addLeaveGuard(guard);
+
+      service.redirectTo(const _RouteB());
+
+      expect(service.currentRequestedConfiguration, const _RouteB());
+      expect(guard.mayLeaveCalls, 0);
+    });
+
+    test('unsaved changes are the guards union', () async {
+      await showBase(const _RouteA());
+      service.addLeaveGuard(TestGuard(fixed: true, unsaved: false));
+      final second = service.addLeaveGuard(TestGuard(fixed: true, unsaved: true));
+
+      expect(service.hasUnsavedChanges, isTrue);
+
+      second.dispose();
+
+      expect(service.hasUnsavedChanges, isFalse);
     });
   });
 }

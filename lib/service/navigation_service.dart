@@ -1,10 +1,13 @@
 import 'package:rxdart/rxdart.dart';
 
+import '../disposable.dart';
 import '../route_table.dart';
 import '../router.dart';
 import '../utils.dart';
 import '../app_coordinator_delegate.dart';
+import 'leave_guard.dart';
 import 'post_auth_redirect_store.dart';
+import 'unload_warning.dart';
 
 /// Captures navigation requests (intentions) and emits the requested route configuration.
 class NavigationService {
@@ -13,6 +16,7 @@ class NavigationService {
   final RouteTable _routes;
 
   final PostAuthRedirectStore _redirectStore;
+  final UnloadWarning _unloadWarning;
 
   final _routeRequest$ = BehaviorSubject<ConfigurationBase?>();
   final _baseRoute$ = BehaviorSubject<ConfigurationBase?>.seeded(null);
@@ -46,10 +50,28 @@ class NavigationService {
     PostAuthRedirectStore? redirectStore,
   })  : _delegate = delegate,
         _routes = routes,
-        _redirectStore = redirectStore ?? InMemoryPostAuthRedirectStore() {
+        _redirectStore = redirectStore ?? InMemoryPostAuthRedirectStore(),
+        _unloadWarning = createUnloadWarning() {
     _logger.verbose(
       "NavigationService initialized with ${_routes.bindings.length} routes",
     );
+    _unloadWarning.attach(() => hasUnsavedChanges);
+  }
+
+  /// Runs [guard] before leaving, until the returned [Disposable] is disposed.
+  Disposable addLeaveGuard(LeaveGuard guard) {
+    throw UnimplementedError('not implemented');
+  }
+
+  bool get hasLeaveGuards => throw UnimplementedError('not implemented');
+
+  /// Any registered guard has unsaved changes.
+  bool get hasUnsavedChanges => throw UnimplementedError('not implemented');
+
+  /// Requests [route] without asking leave guards. For the coordinator's own
+  /// redirects; apps use [navigateTo].
+  void redirectTo(ConfigurationBase route) {
+    throw UnimplementedError('not implemented');
   }
 
   /// Keeps [configuration]'s URI in the redirect store, so a navigation
@@ -184,6 +206,7 @@ class NavigationService {
 
   void dispose() {
     _logger.info('Disposing NavigationService.');
+    _unloadWarning.dispose();
     _routeRequest$.close();
     _baseRoute$.close();
     _modalRoute$.close();

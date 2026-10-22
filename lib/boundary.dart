@@ -17,6 +17,7 @@ export 'model/app_config.dart';
 export 'service/auth_service.dart';
 export 'service/base_api_client.dart';
 export 'service/http_service.dart';
+export 'service/leave_guard.dart';
 export 'service/navigation_service.dart';
 export 'service/post_auth_redirect_store.dart';
 export 'service/stored_token_auth_service.dart';

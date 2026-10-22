@@ -247,7 +247,8 @@ void main() {
         final coordinator = await show(loggedOut, const CasesRoute());
 
         expect(coordinator.baseConfiguration, isNull);
-        verify(navigation().navigateTo(const GuestRoute())).called(1);
+        verify(navigation().redirectTo(const GuestRoute())).called(1);
+        verifyNever(navigation().navigateTo(any));
         verifyNever(navigation().setPostAuthRedirect(any));
       });
 
