@@ -1,5 +1,12 @@
 ## 0.5.0 (unreleased)
 
+*   New dependency: `reactive_forms: ^18.2.2`.
+*   `forms.dart` entry library exports form helpers; not exported from `boundary.dart`.
+*   `FormSession` wraps a reactive_forms `FormGroup` with debounced auto-save, `flush`, `retry`, `patchFromServer` and `applyViolations`.
+*   `SaveStatus` is `idle`, `dirty`, `invalid`, `saving`, `saved` or `error`.
+*   `FormSession.applyViolations` maps `HttpValidationProblem` fields onto control `server` errors and returns unmatched violations.
+*   `Disposable` is a core interface for anything a controller can own and release with `dispose()`.
+*   `Controller.own` also accepts `Disposable` and reactive_forms `AbstractControl`.
 *   `Notice`, `NoticeLevel` and `NoticeService` are new: a broadcast stream of notices for the UI.
 *   `NoticeSnackBarListener` shows each notice as a `SnackBar` through the nearest `ScaffoldMessenger`.
 *   `ErrorPolicy.handle` turns an error into a notice, a page when `pageFor` returns one, or nothing for `SessionTerminatedException`.
