@@ -14,7 +14,6 @@ dependencies:
   dart_mappable: ^4.2.2
   flutter:
     sdk: flutter
-  flutter_dotenv: ^6.0.0
   http: ^1.2.1
   intl: ^0.20.2
   oauth2: ^2.0.2

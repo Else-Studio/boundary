@@ -73,6 +73,12 @@
 *   `NavigationService(redirectStore:)` takes the redirect store; null means in memory.
 *   `AppCoordinatorDelegate.createPostAuthRedirectStore()` supplies the store `NavigationService` uses.
 *   `NavigationService` no longer keeps the post-auth redirect in SharedPreferences under `post_auth_redirect_intent`, and the 5-minute expiry is removed.
+*   `oauth.dart` is a new entry library (not exported from `boundary.dart`) for the deprecated web-only OAuth adapter.
+*   `OAuthAuthService` is a deprecated, web-only `AuthService` using OAuth2 PKCE and JWKS.
+*   `OAuthConfig` replaces the old `dotenv` keys; `extraAuthorizationParameters` replaces `embedded` and `email`.
+*   `TokenVerifier` and `JwksTokenVerifier` verify access tokens (JWKS RS256 by `kid`).
+*   `SharedPreferencesPostAuthRedirectStore` keeps the post-auth redirect across an OAuth page leave, with a 5-minute lifetime.
+*   Removed: the `flutter_dotenv` dependency.
 
 ## 0.4.1
 
