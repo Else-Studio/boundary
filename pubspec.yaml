@@ -24,6 +24,7 @@ dependencies:
   talker: ^5.0.2
   flutter_web_plugins:
     sdk: flutter
+  reactive_forms: ^18.2.2
 
 dev_dependencies:
   flutter_test:

@@ -4,6 +4,7 @@ export 'controller_slot_builder.dart';
 export 'app_coordinator.dart';
 export 'app_coordinator_delegate.dart';
 export 'async_result_builder.dart';
+export 'disposable.dart';
 export 'error_policy.dart';
 export 'notice.dart';
 export 'responsive_framework.dart';

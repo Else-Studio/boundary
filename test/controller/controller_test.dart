@@ -1,9 +1,14 @@
 import 'dart:async';
 
 import 'package:boundary/boundary.dart';
+import 'package:boundary/forms.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:reactive_forms/reactive_forms.dart';
 import 'package:rxdart/rxdart.dart';
+
+import '../helpers/form_fixture.dart';
+import '../helpers/sut_factory.dart';
 
 // A controller whose actions record what happened. `onError` collects errors.
 // `ownIt` and `emitTo` are public handles on the protected `own` and `emit`,
@@ -93,6 +98,16 @@ class FakeSubscription implements StreamSubscription<int> {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+// A Disposable that counts how many times dispose was called.
+class CountingDisposable implements Disposable {
+  int disposeCount = 0;
+
+  @override
+  void dispose() {
+    disposeCount++;
+  }
 }
 
 void main() {
@@ -351,6 +366,42 @@ void main() {
       unawaited(closed.close());
 
       expect(() => c.emitTo(closed, 3), returnsNormally);
+    });
+  });
+
+  group('owning forms and disposables', () {
+    test('owning a session, a form and a disposable releases them all',
+        () async {
+      final c = RecordingController();
+      final fixture = FormFixture();
+      final FormSession session = SutFactory.createFormSession(
+        form: fixture.form,
+        save: fixture.save,
+        debounce: const Duration(milliseconds: 50),
+      );
+      final separateForm = FormGroup({
+        'x': FormControl<String>(value: ''),
+      });
+      final fake = CountingDisposable();
+
+      c.ownIt(session);
+      c.ownIt(separateForm);
+      c.ownIt(fake);
+
+      expect(() => c.ownIt(Object()), throwsArgumentError);
+
+      final statusDone = Completer<void>();
+      session.status.listen((_) {}, onDone: statusDone.complete);
+      final formDone = Completer<void>();
+      separateForm.valueChanges.listen((_) {}, onDone: formDone.complete);
+
+      c.dispose();
+      await pumpEventQueue();
+
+      // Equivalent to emitsInOrder([anything, emitsDone]) on each stream.
+      expect(statusDone.isCompleted, isTrue);
+      expect(formDone.isCompleted, isTrue);
+      expect(fake.disposeCount, 1);
     });
   });
 }

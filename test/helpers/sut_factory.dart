@@ -3,6 +3,7 @@
 import 'package:auto_injector/auto_injector.dart';
 import 'package:boundary/app_coordinator.dart';
 import 'package:boundary/error_policy.dart';
+import 'package:boundary/forms.dart';
 import 'package:boundary/model/error_models.dart';
 import 'package:boundary/notice.dart';
 import 'package:boundary/oauth.dart';
@@ -12,6 +13,7 @@ import 'package:boundary/service/locale_service.dart';
 import 'package:boundary/service/navigation_service.dart';
 import 'package:boundary/service/stored_token_auth_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:reactive_forms/reactive_forms.dart';
 
 import 'mock_dependency_provider.dart';
 
@@ -126,6 +128,21 @@ class SutFactory {
     return AppCoordinator(
       effectiveProvider.mockAppCoordinatorDelegate,
       injector: injector,
+    );
+  }
+
+  /// Creates a [FormSession] around the given form and save callback.
+  static FormSession createFormSession({
+    required FormGroup form,
+    required Future<void> Function(Map<String, Object?> value) save,
+    required Duration debounce,
+    void Function(Object error, StackTrace stackTrace)? onSaveError,
+  }) {
+    return FormSession(
+      form: form,
+      save: save,
+      debounce: debounce,
+      onSaveError: onSaveError,
     );
   }
 }

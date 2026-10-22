@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:reactive_forms/reactive_forms.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'disposable.dart';
 import 'router.dart';
 import 'utils.dart';
 
@@ -153,6 +155,8 @@ abstract class Controller<A> {
   /// Registers [resource] to be released by [dispose], and returns it.
   ///
   /// Accepted types and how each is released:
+  /// - [Disposable]: `dispose()`
+  /// - [AbstractControl] (FormGroup, FormControl, FormArray): `dispose()`
   /// - [StreamSubscription]: `cancel()`
   /// - [StreamController] (includes rxdart Subjects): `close()`
   /// - [Timer]: `cancel()`
@@ -166,6 +170,8 @@ abstract class Controller<A> {
   @protected
   T own<T extends Object>(T resource) {
     final FutureOr<void> Function() release = switch (resource) {
+      Disposable() => resource.dispose,
+      AbstractControl() => resource.dispose,
       // CompositeSubscription is itself a StreamSubscription, so it goes first.
       CompositeSubscription() => resource.dispose,
       StreamSubscription() => resource.cancel,
