@@ -1,11 +1,15 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:auto_injector/auto_injector.dart';
 import 'package:boundary/app_coordinator.dart';
 import 'package:boundary/model/error_models.dart';
+import 'package:boundary/oauth.dart';
 import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/service/http_service.dart';
 import 'package:boundary/service/locale_service.dart';
 import 'package:boundary/service/navigation_service.dart';
 import 'package:boundary/service/stored_token_auth_service.dart';
+import 'package:http/http.dart' as http;
 
 import 'mock_dependency_provider.dart';
 
@@ -66,6 +70,27 @@ class SutFactory {
       store: store,
       logout: logout,
     );
+  }
+
+  /// Creates an [OAuthAuthService] with the given config and test doubles.
+  static OAuthAuthService createOAuthAuthService({
+    required OAuthConfig config,
+    http.Client? httpClient,
+    TokenVerifier? verifier,
+  }) {
+    return OAuthAuthService(
+      config,
+      httpClient: httpClient,
+      verifier: verifier,
+    );
+  }
+
+  /// Creates a [SharedPreferencesPostAuthRedirectStore] with a test clock.
+  static SharedPreferencesPostAuthRedirectStore
+      createSharedPreferencesRedirectStore({
+    DateTime Function()? now,
+  }) {
+    return SharedPreferencesPostAuthRedirectStore(now: now);
   }
 
   static AppCoordinator createAppCoordinator(
