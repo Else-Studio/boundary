@@ -637,9 +637,14 @@ void main() {
 
     test('navigateBackOrLogin asks the guard before leaving', () async {
       // Last base is /a while the coordinator is showing /cases/7, so the
-      // target is not the shown route and the guard must run.
+      // target is not the shown route and the guard must run. The previous
+      // request stays /a until the guard answers.
       service.navigateTo(const _RouteA());
       service.onRouteResolved(base: const _CaseRoute(7), modal: null);
+      final emitted = <ConfigurationBase?>[];
+      service.routeRequestStream.listen(emitted.add);
+      await pumpEventQueue();
+      emitted.clear();
       final answer = Completer<bool>();
       final guard = TestGuard(answer: answer);
       service.addLeaveGuard(guard);
@@ -647,12 +652,14 @@ void main() {
       service.navigateBackOrLogin();
 
       expect(guard.mayLeaveCalls, 1);
-      expect(service.currentRequestedConfiguration, const _CaseRoute(7));
+      expect(service.currentRequestedConfiguration, const _RouteA());
+      expect(emitted, isEmpty);
 
       answer.complete(true);
       await pumpEventQueue();
 
       expect(service.currentRequestedConfiguration, const _RouteA());
+      expect(emitted, [const _RouteA()]);
     });
 
     test('requests during a check are dropped', () async {
