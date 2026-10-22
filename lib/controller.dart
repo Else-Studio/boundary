@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'controller_slot.dart';
 import 'router.dart';
 import 'utils.dart';
 
 /// A route controller that stays alive when its route type returns with
-/// different params.
-abstract interface class RouteAware<R extends ConfigurationBase> {
+/// different params. (Was RouteAware.)
+abstract interface class RouteUpdatable<R extends ConfigurationBase> {
   /// Called instead of recreating the controller. Not called for an equal
   /// route, and never together with enter for the same change.
   void update(R route);
@@ -71,8 +72,11 @@ abstract class Controller<A> {
   FutureOr<void> handleAction(A action);
 
   /// Receives every error thrown by [handleAction], sync or async, including
-  /// one that completes after [dispose]. Default: logs it with
-  /// `appLogger.error` and returns. Never rethrow from here.
+  /// one that completes after [dispose]. Default: forwards to the parent's
+  /// [onError] when this controller has a parent (by [adopt] or by a [slot])
+  /// and is not disposed; otherwise logs with `appLogger.error`. An error
+  /// that arrives after this child was disposed is logged, never forwarded.
+  /// Never rethrow from here.
   @protected
   void onError(Object error, StackTrace stackTrace) {
     appLogger.error(
@@ -80,6 +84,35 @@ abstract class Controller<A> {
       error,
       stackTrace,
     );
+  }
+
+  /// Makes this controller [child]'s parent and owns it: child is disposed
+  /// with this controller (as by [own]). Returns [child]. After this
+  /// controller is disposed, disposes [child] at once (as [own] does).
+  /// Throws [StateError] when [child] is this controller or already has a
+  /// parent.
+  @protected
+  C adopt<C extends Controller>(C child) {
+    throw UnimplementedError('not implemented');
+  }
+
+  /// A slot for zero or one keyed child at a time, released with this
+  /// controller. Each child the slot creates has this controller as parent,
+  /// but the slot, not this controller, disposes it.
+  @protected
+  ControllerSlot<K, C> slot<K, C extends Controller>(C Function(K key) create) {
+    throw UnimplementedError('not implemented');
+  }
+
+  /// Listens to [stream] until dispose. Each event goes to [onData]; a sync
+  /// or async throw from [onData], and an error event, go to [onError]. The
+  /// subscription survives errors.
+  @protected
+  StreamSubscription<T> listenTo<T>(
+    Stream<T> stream,
+    FutureOr<void> Function(T event) onData,
+  ) {
+    throw UnimplementedError('not implemented');
   }
 
   /// Registers [resource] to be released by [dispose], and returns it.

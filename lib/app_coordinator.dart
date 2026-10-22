@@ -1,5 +1,5 @@
 import 'package:auto_injector/auto_injector.dart';
-import 'package:flutter/material.dart' hide RouteAware;
+import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -338,20 +338,20 @@ class AppCoordinator extends ChangeNotifier {
     _layoutController = nextLayout?.createController(injector);
   }
 
-  /// Calls [RouteAware.update] when [controller] stays for a route of the
+  /// Calls [RouteUpdatable.update] when [controller] stays for a route of the
   /// same type with other params. Returns whether it did.
   bool _updateInPlace(
     Controller? controller,
     ConfigurationBase? current,
     ConfigurationBase? next,
   ) {
-    if (controller is! RouteAware ||
+    if (controller is! RouteUpdatable ||
         current == null ||
         next == null ||
         current.runtimeType != next.runtimeType) {
       return false;
     }
-    (controller as RouteAware).update(next);
+    (controller as RouteUpdatable).update(next);
     return true;
   }
 

@@ -16,7 +16,7 @@
 import 'dart:async';
 
 import 'package:boundary/boundary.dart';
-import 'package:flutter/widgets.dart' hide RouteAware;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:rxdart/rxdart.dart';

@@ -9,7 +9,7 @@
 //   - test: updating a controller notifies listeners once
 
 import 'package:boundary/boundary.dart';
-import 'package:flutter/widgets.dart' hide RouteAware;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:rxdart/rxdart.dart';
@@ -62,7 +62,7 @@ class NoteModalRoute extends ConfigurationBase {
 
 /// Records what the coordinator does to it, and accepts route updates.
 class AwareCaseController extends Controller<void>
-    implements RouteAware<CaseRoute> {
+    implements RouteUpdatable<CaseRoute> {
   final List<ConfigurationBase> entered = [];
   final List<CaseRoute> updated = [];
   int disposeCount = 0;
@@ -108,7 +108,7 @@ class PlainCaseController extends Controller<void> {
 }
 
 class AwareNoteController extends Controller<void>
-    implements RouteAware<NoteModalRoute> {
+    implements RouteUpdatable<NoteModalRoute> {
   final List<ConfigurationBase> entered = [];
   final List<NoteModalRoute> updated = [];
   int disposeCount = 0;
