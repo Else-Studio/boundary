@@ -113,6 +113,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 750));
     expect(find.text('old'), findsNothing);
 
+    // Notices queue. Elapse the first snack bar so the next one is visible.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
     second.show(const Notice('new'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 750));

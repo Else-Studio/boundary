@@ -1,11 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'utils.dart';
 
-class AsyncResultBuilder<T> extends StatefulWidget {
+class AsyncResultBuilder<T> extends StatelessWidget {
   const AsyncResultBuilder({
     super.key,
     required this.stream,
@@ -22,107 +20,39 @@ class AsyncResultBuilder<T> extends StatefulWidget {
   final WidgetBuilder? empty;
 
   @override
-  State<AsyncResultBuilder<T>> createState() => _AsyncResultBuilderState<T>();
-}
+  Widget build(BuildContext context) {
+    return StreamBuilder<AsyncResult<T>>(
+      stream: stream,
+      initialData: stream is ValueStream<AsyncResult<T>>
+          ? (stream as ValueStream<AsyncResult<T>>).valueOrNull
+          : null,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          final failureResult = Failure<T>(
+            snapshot.error!,
+            stackTrace: snapshot.stackTrace,
+          );
+          return failure?.call(context, failureResult) ??
+              const Center(child: Text('Something went wrong.'));
+        }
 
-class _AsyncResultBuilderState<T> extends State<AsyncResultBuilder<T>> {
-  StreamSubscription<AsyncResult<T>>? _subscription;
-  AsyncResult<T>? _result;
-  Object? _error;
-  StackTrace? _errorStackTrace;
+        final result = snapshot.data;
+        if (result == null) {
+          return loading?.call(context) ??
+              const Center(child: CircularProgressIndicator());
+        }
 
-  @override
-  void initState() {
-    super.initState();
-    _attach(widget.stream);
-    _armFrame();
-  }
-
-  @override
-  void didUpdateWidget(AsyncResultBuilder<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.stream != widget.stream) {
-      _subscription?.cancel();
-      _attach(widget.stream);
-      _armFrame();
-    }
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
-
-  void _attach(Stream<AsyncResult<T>> stream) {
-    _error = null;
-    _errorStackTrace = null;
-    _result = _initialResult(stream);
-    _subscription = stream.listen(
-      (value) {
-        if (!mounted) return;
-        setState(() {
-          _error = null;
-          _errorStackTrace = null;
-          _result = value;
-        });
-        _armFrame();
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        if (!mounted) return;
-        setState(() {
-          _error = error;
-          _errorStackTrace = stackTrace;
-          _result = null;
-        });
-        _armFrame();
+        return switch (result) {
+          Loading() =>
+            loading?.call(context) ??
+                const Center(child: CircularProgressIndicator()),
+          Data(:final data) => this.data(context, data),
+          Failure() =>
+            failure?.call(context, result) ??
+                const Center(child: Text('Something went wrong.')),
+          Empty() => empty?.call(context) ?? const SizedBox.shrink(),
+        };
       },
     );
-  }
-
-  AsyncResult<T>? _initialResult(Stream<AsyncResult<T>> stream) {
-    if (stream is ValueStream<AsyncResult<T>>) {
-      return stream.valueOrNull;
-    }
-    return null;
-  }
-
-  /// Keeps one frame pending after the current one so a later async stream
-  /// event can be built by a single [WidgetTester.pump].
-  void _armFrame() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        WidgetsBinding.instance.scheduleFrame();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_error != null) {
-      final failureResult = Failure<T>(
-        _error!,
-        stackTrace: _errorStackTrace,
-      );
-      return widget.failure?.call(context, failureResult) ??
-          const Center(child: Text('Something went wrong.'));
-    }
-
-    final result = _result;
-    if (result == null) {
-      return widget.loading?.call(context) ??
-          const Center(child: CircularProgressIndicator());
-    }
-
-    return switch (result) {
-      Loading() =>
-        widget.loading?.call(context) ??
-            const Center(child: CircularProgressIndicator()),
-      Data(:final data) => widget.data(context, data),
-      Failure() =>
-        widget.failure?.call(context, result) ??
-            const Center(child: Text('Something went wrong.')),
-      Empty() => widget.empty?.call(context) ?? const SizedBox.shrink(),
-    };
   }
 }

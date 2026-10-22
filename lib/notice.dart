@@ -76,11 +76,9 @@ class _NoticeSnackBarListenerState extends State<NoticeSnackBarListener> {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       if (messenger == null) return;
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(content: Text(notice.message)),
-        );
+      messenger.showSnackBar(
+        SnackBar(content: Text(notice.message)),
+      );
     });
   }
 

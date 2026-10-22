@@ -68,6 +68,7 @@ void main() {
 
       subject.add(const Empty());
       await tester.pump();
+      await tester.pump();
 
       expect(find.byType(Text), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
