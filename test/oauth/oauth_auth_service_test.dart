@@ -123,10 +123,9 @@ void main() {
 
     final url = await s.authorizationUrl();
 
-    expect(
-      url.replace(queryParameters: const {}).toString(),
-      'https://id.example.com/auth',
-    );
+    expect(url.scheme, 'https');
+    expect(url.host, 'id.example.com');
+    expect(url.path, '/auth');
     final q = url.queryParameters;
     expect(q['client_id'], 'web-app');
     expect(q['redirect_uri'], 'https://app.example.com/callback');
@@ -294,10 +293,9 @@ void main() {
     final s = await signedIn();
 
     final url = await s.logoutUrl();
-    expect(
-      url.replace(queryParameters: const {}).toString(),
-      'https://id.example.com/logout',
-    );
+    expect(url.scheme, 'https');
+    expect(url.host, 'id.example.com');
+    expect(url.path, '/logout');
     final q = url.queryParameters;
     expect(q['id_token_hint'], 'id-1');
     expect(q['post_logout_redirect_uri'], 'https://app.example.com/bye');
