@@ -198,7 +198,7 @@ class AppCoordinator extends ChangeNotifier {
       } else if (access == RouteAccess.protected) {
         if (state is SignedOut && state.reason == SignedOutReason.signedOut) {
           _logger.info("Signed out by the user. Navigating...");
-          navigationService.navigateTo(_delegate.getLoginRoute());
+          navigationService.redirectTo(_delegate.getLoginRoute());
           return null;
         }
         _logger.info(

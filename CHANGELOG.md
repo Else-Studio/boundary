@@ -1,5 +1,13 @@
 ## 0.5.0 (unreleased)
 
+*   `LeaveGuard` lets a page veto or confirm leaving through `mayLeave` and report `hasUnsavedChanges`.
+*   `NavigationService.addLeaveGuard` registers a guard until the returned `Disposable` is disposed; `hasLeaveGuards` and `hasUnsavedChanges` reflect the registered set.
+*   `NavigationService.redirectTo` requests a route without asking leave guards (for the coordinator's own redirects).
+*   Leave guards run on `navigateTo`, `navigateBackOrLogin`, `dismissModal`, `retryLastNavigation` and `navigateUp`; they skip when opening a modal over a page, when the target equals the shown route, and on `routerSetNewPath` / `syncBaseConfiguration` / `clearRequest` / `redirectTo`.
+*   `CoreRouterDelegate.popRoute` with leave guards routes a modal's system back through `NavigationService.navigateUp` instead of popping the Navigator first.
+*   Web unload warning: conditional import (`dart.library.js_interop`) attaches a `beforeunload` listener while any guard has unsaved changes.
+*   New dependency: `web: 1.1.1` (web unload warning).
+*   `FormLeaveGuard` connects a `FormSession` to leave checks: flush first, then the app's `confirm` when that fails or the form is invalid.
 *   New dependency: `reactive_forms: ^18.2.2`.
 *   `forms.dart` entry library exports form helpers; not exported from `boundary.dart`.
 *   `FormSession` wraps a reactive_forms `FormGroup` with debounced auto-save, `flush`, `retry`, `patchFromServer` and `applyViolations`.

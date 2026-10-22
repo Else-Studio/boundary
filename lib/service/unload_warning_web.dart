@@ -1,12 +1,30 @@
+import 'dart:async';
+
+import 'package:web/web.dart' as web;
+
 import 'unload_warning.dart';
 
-/// Web beforeunload listener. Behaviour is filled in by the implementer.
+/// Web beforeunload listener driven by [NavigationService.hasUnsavedChanges].
 class _WebUnloadWarning implements UnloadWarning {
-  @override
-  void attach(bool Function() hasUnsavedChanges) {}
+  StreamSubscription<web.BeforeUnloadEvent>? _sub;
 
   @override
-  void dispose() {}
+  void attach(bool Function() hasUnsavedChanges) {
+    _sub?.cancel();
+    _sub = web.EventStreamProviders.beforeUnloadEvent
+        .forTarget(web.window)
+        .listen((event) {
+      if (!hasUnsavedChanges()) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _sub = null;
+  }
 }
 
 UnloadWarning createUnloadWarning() => _WebUnloadWarning();

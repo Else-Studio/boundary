@@ -23,6 +23,9 @@ class NavigationService {
   final _modalRoute$ = BehaviorSubject<ConfigurationBase?>.seeded(null);
   ConfigurationBase? _lastBaseConfiguration;
 
+  final List<LeaveGuard> _leaveGuards = [];
+  bool _leaveCheckRunning = false;
+
   ValueStream<ConfigurationBase?> get routeRequestStream =>
       _routeRequest$.stream;
   ConfigurationBase? get currentRequestedConfiguration =>
@@ -60,18 +63,23 @@ class NavigationService {
 
   /// Runs [guard] before leaving, until the returned [Disposable] is disposed.
   Disposable addLeaveGuard(LeaveGuard guard) {
-    throw UnimplementedError('not implemented');
+    _leaveGuards.add(guard);
+    return _LeaveGuardRegistration(() => _leaveGuards.remove(guard));
   }
 
-  bool get hasLeaveGuards => throw UnimplementedError('not implemented');
+  bool get hasLeaveGuards => _leaveGuards.isNotEmpty;
 
   /// Any registered guard has unsaved changes.
-  bool get hasUnsavedChanges => throw UnimplementedError('not implemented');
+  bool get hasUnsavedChanges =>
+      _leaveGuards.any((guard) => guard.hasUnsavedChanges);
 
   /// Requests [route] without asking leave guards. For the coordinator's own
   /// redirects; apps use [navigateTo].
   void redirectTo(ConfigurationBase route) {
-    throw UnimplementedError('not implemented');
+    _logger.debug(
+      "Redirect request received (unguarded): ${route.runtimeType}",
+    );
+    _emitRequest(route);
   }
 
   /// Keeps [configuration]'s URI in the redirect store, so a navigation
@@ -109,14 +117,14 @@ class NavigationService {
     _logger.debug(
       "Request received to navigate to: ${configuration.runtimeType}",
     );
-    _processRequest(configuration);
+    _requestGuarded(configuration);
   }
 
   void routerSetNewPath(ConfigurationBase configuration) {
     _logger.debug(
       "Platform requested navigation path: ${configuration.runtimeType}",
     );
-    _processRequest(configuration);
+    _emitRequest(configuration);
   }
 
   /// Manually synchronizes the internal tracking of the "last base" configuration.
@@ -155,6 +163,9 @@ class NavigationService {
   /// One step up. A shown modal: dismissModal(), returns true. Otherwise the
   /// shown base has a parent: navigateTo(parent), returns true. Otherwise
   /// returns false and requests nothing.
+  ///
+  /// The bool is synchronous: true when there was a modal or a parent, even
+  /// when a leave guard later vetoes the request.
   bool navigateUp() {
     if (_modalRoute$.value != null) {
       dismissModal();
@@ -174,16 +185,62 @@ class NavigationService {
       _logger.info(
         "Requesting navigation back to last base route: ${_lastBaseConfiguration!.runtimeType}",
       );
-      _processRequest(_lastBaseConfiguration!);
+      _requestGuarded(_lastBaseConfiguration!);
     } else {
       _logger.warning(
         "Cannot navigate back: last base configuration is unknown. Requesting ${fallback.runtimeType} as fallback.",
       );
-      _processRequest(fallback);
+      _requestGuarded(fallback);
     }
   }
 
-  void _processRequest(ConfigurationBase configuration) {
+  void _requestGuarded(ConfigurationBase target) {
+    if (_leaveCheckRunning) {
+      _logger.debug(
+        'Dropping navigation request while a leave check is running: ${target.runtimeType}',
+      );
+      return;
+    }
+
+    final shown = _modalRoute$.value ?? _baseRoute$.value;
+    final openingModalOverPage =
+        target.isModal && _modalRoute$.value == null;
+    if (_leaveGuards.isEmpty || target == shown || openingModalOverPage) {
+      _emitRequest(target);
+      return;
+    }
+
+    _leaveCheckRunning = true;
+    _runLeaveGuardsThen(target);
+  }
+
+  Future<void> _runLeaveGuardsThen(ConfigurationBase target) async {
+    try {
+      for (final guard in List<LeaveGuard>.of(_leaveGuards)) {
+        try {
+          final allowed = await guard.mayLeave();
+          if (!allowed) {
+            _logger.debug(
+              'Leave guard vetoed navigation to ${target.runtimeType}',
+            );
+            return;
+          }
+        } catch (error, stackTrace) {
+          _logger.error(
+            'Leave guard failed for ${target.runtimeType}',
+            error,
+            stackTrace,
+          );
+          return;
+        }
+      }
+      _emitRequest(target);
+    } finally {
+      _leaveCheckRunning = false;
+    }
+  }
+
+  void _emitRequest(ConfigurationBase configuration) {
     _logger.verbose(
       'Processing request for route: ${configuration.runtimeType}',
     );
@@ -210,5 +267,19 @@ class NavigationService {
     _routeRequest$.close();
     _baseRoute$.close();
     _modalRoute$.close();
+  }
+}
+
+class _LeaveGuardRegistration implements Disposable {
+  _LeaveGuardRegistration(this._remove);
+
+  final void Function() _remove;
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _remove();
   }
 }

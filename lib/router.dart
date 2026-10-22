@@ -245,13 +245,17 @@ class CoreRouterDelegate extends RouterDelegate<ConfigurationBase>
     appCoordinator.navigationService.routerSetNewPath(configuration);
   }
 
-  /// System back. A modal shown: pops it as the mixin does, and
-  /// `onDidRemovePage` dismisses it. Otherwise asks
+  /// System back. A modal shown and no leave guards: pops it as the mixin
+  /// does, and `onDidRemovePage` dismisses it. Otherwise asks
   /// [NavigationService.navigateUp]; false leaves the app (the platform decides).
   @override
   Future<bool> popRoute() {
-    if (appCoordinator.modalConfiguration != null) return super.popRoute();
-    return SynchronousFuture(appCoordinator.navigationService.navigateUp());
+    final navigation = appCoordinator.navigationService;
+    if (appCoordinator.modalConfiguration != null &&
+        !navigation.hasLeaveGuards) {
+      return super.popRoute();
+    }
+    return SynchronousFuture(navigation.navigateUp());
   }
 
   @override

@@ -13,8 +13,15 @@ class FormLeaveGuard implements LeaveGuard {
   final Future<bool> Function() confirm;
 
   @override
-  bool get hasUnsavedChanges => throw UnimplementedError('not implemented');
+  bool get hasUnsavedChanges => session.hasUnsavedChanges;
 
+  /// No unsaved changes: true. Else [FormSession.flush]: true → true;
+  /// false → [confirm].
   @override
-  Future<bool> mayLeave() => throw UnimplementedError('not implemented');
+  Future<bool> mayLeave() async {
+    if (!session.hasUnsavedChanges) return true;
+    final flushed = await session.flush();
+    if (flushed) return true;
+    return confirm();
+  }
 }
