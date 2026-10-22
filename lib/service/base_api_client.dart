@@ -42,6 +42,12 @@ class SessionTerminatedException extends ApiException {
         );
 }
 
+/// A 401 on a call that needed no token, e.g. a refused login.
+class CredentialsRejectedException extends ApiException {
+  CredentialsRejectedException({super.problem})
+      : super(problem?.detail ?? 'The sign-in details were not accepted.');
+}
+
 /// Thrown when the user does not have permission to access a resource (HTTP 403).
 class ForbiddenException extends ApiException {
   ForbiddenException({super.problem})

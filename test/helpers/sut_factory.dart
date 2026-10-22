@@ -2,7 +2,9 @@
 
 import 'package:auto_injector/auto_injector.dart';
 import 'package:boundary/app_coordinator.dart';
+import 'package:boundary/error_policy.dart';
 import 'package:boundary/model/error_models.dart';
+import 'package:boundary/notice.dart';
 import 'package:boundary/oauth.dart';
 import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/service/http_service.dart';
@@ -91,6 +93,23 @@ class SutFactory {
     DateTime Function()? now,
   }) {
     return SharedPreferencesPostAuthRedirectStore(now: now);
+  }
+
+  /// Creates a real [NoticeService].
+  static NoticeService createNoticeService() => NoticeService();
+
+  /// Creates an [ErrorPolicy] with a real [NoticeService] and the provider's
+  /// mock navigation service. Pass [notices] to share the same instance the
+  /// test listens on.
+  static ErrorPolicy createErrorPolicy({
+    MockDependencyProvider? provider,
+    NoticeService? notices,
+  }) {
+    final effectiveProvider = provider ?? MockDependencyProvider();
+    return ErrorPolicy(
+      notices ?? createNoticeService(),
+      effectiveProvider.mockNavigationService,
+    );
   }
 
   static AppCoordinator createAppCoordinator(

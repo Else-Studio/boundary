@@ -58,6 +58,13 @@ class HttpProblemMapper extends ClassMapperBase<HttpProblem> {
     _$details,
     opt: true,
   );
+  static Map<String, dynamic> _$extensions(HttpProblem v) => v.extensions;
+  static const Field<HttpProblem, Map<String, dynamic>> _f$extensions = Field(
+    'extensions',
+    _$extensions,
+    opt: true,
+    def: const <String, dynamic>{},
+  );
 
   @override
   final MappableFields<HttpProblem> fields = const {
@@ -67,6 +74,7 @@ class HttpProblemMapper extends ClassMapperBase<HttpProblem> {
     #detail: _f$detail,
     #instance: _f$instance,
     #details: _f$details,
+    #extensions: _f$extensions,
   };
 
   static HttpProblem _instantiate(DecodingData data) {
@@ -77,6 +85,7 @@ class HttpProblemMapper extends ClassMapperBase<HttpProblem> {
       detail: data.dec(_f$detail),
       instance: data.dec(_f$instance),
       details: data.dec(_f$details),
+      extensions: data.dec(_f$extensions),
     );
   }
 
@@ -141,6 +150,8 @@ extension HttpProblemValueCopy<$R, $Out>
 abstract class HttpProblemCopyWith<$R, $In extends HttpProblem, $Out>
     implements ClassCopyWith<$R, $In, $Out> {
   ListCopyWith<$R, String, ObjectCopyWith<$R, String, String>?>? get details;
+  MapCopyWith<$R, String, dynamic, ObjectCopyWith<$R, dynamic, dynamic>?>
+  get extensions;
   $R call({
     String? type,
     String? title,
@@ -148,6 +159,7 @@ abstract class HttpProblemCopyWith<$R, $In extends HttpProblem, $Out>
     String? detail,
     String? instance,
     List<String>? details,
+    Map<String, dynamic>? extensions,
   });
   HttpProblemCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
 }
@@ -170,6 +182,13 @@ class _HttpProblemCopyWithImpl<$R, $Out>
         )
       : null;
   @override
+  MapCopyWith<$R, String, dynamic, ObjectCopyWith<$R, dynamic, dynamic>?>
+  get extensions => MapCopyWith(
+    $value.extensions,
+    (v, t) => ObjectCopyWith(v, $identity, t),
+    (v) => call(extensions: v),
+  );
+  @override
   $R call({
     Object? type = $none,
     Object? title = $none,
@@ -177,6 +196,7 @@ class _HttpProblemCopyWithImpl<$R, $Out>
     Object? detail = $none,
     Object? instance = $none,
     Object? details = $none,
+    Map<String, dynamic>? extensions,
   }) => $apply(
     FieldCopyWithData({
       if (type != $none) #type: type,
@@ -185,6 +205,7 @@ class _HttpProblemCopyWithImpl<$R, $Out>
       if (detail != $none) #detail: detail,
       if (instance != $none) #instance: instance,
       if (details != $none) #details: details,
+      if (extensions != null) #extensions: extensions,
     }),
   );
   @override
@@ -195,6 +216,7 @@ class _HttpProblemCopyWithImpl<$R, $Out>
     detail: data.get(#detail, or: $value.detail),
     instance: data.get(#instance, or: $value.instance),
     details: data.get(#details, or: $value.details),
+    extensions: data.get(#extensions, or: $value.extensions),
   );
 
   @override
@@ -401,6 +423,15 @@ class HttpValidationProblemMapper
     _$instance,
     opt: true,
   );
+  static Map<String, dynamic> _$extensions(HttpValidationProblem v) =>
+      v.extensions;
+  static const Field<HttpValidationProblem, Map<String, dynamic>>
+  _f$extensions = Field(
+    'extensions',
+    _$extensions,
+    opt: true,
+    def: const <String, dynamic>{},
+  );
   static List<Violation> _$violations(HttpValidationProblem v) => v.violations;
   static const Field<HttpValidationProblem, List<Violation>> _f$violations =
       Field('violations', _$violations, opt: true, def: const []);
@@ -413,6 +444,7 @@ class HttpValidationProblemMapper
     #detail: _f$detail,
     #details: _f$details,
     #instance: _f$instance,
+    #extensions: _f$extensions,
     #violations: _f$violations,
   };
 
@@ -432,6 +464,7 @@ class HttpValidationProblemMapper
       detail: data.dec(_f$detail),
       details: data.dec(_f$details),
       instance: data.dec(_f$instance),
+      extensions: data.dec(_f$extensions),
       violations: data.dec(_f$violations),
     );
   }
@@ -508,6 +541,9 @@ abstract class HttpValidationProblemCopyWith<
     implements HttpProblemCopyWith<$R, $In, $Out> {
   @override
   ListCopyWith<$R, String, ObjectCopyWith<$R, String, String>>? get details;
+  @override
+  MapCopyWith<$R, String, dynamic, ObjectCopyWith<$R, dynamic, dynamic>>
+  get extensions;
   ListCopyWith<$R, Violation, ViolationCopyWith<$R, Violation, Violation>>
   get violations;
   @override
@@ -518,6 +554,7 @@ abstract class HttpValidationProblemCopyWith<
     String? detail,
     List<String>? details,
     String? instance,
+    Map<String, dynamic>? extensions,
     List<Violation>? violations,
   });
   HttpValidationProblemCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
@@ -543,6 +580,13 @@ class _HttpValidationProblemCopyWithImpl<$R, $Out>
         )
       : null;
   @override
+  MapCopyWith<$R, String, dynamic, ObjectCopyWith<$R, dynamic, dynamic>>
+  get extensions => MapCopyWith(
+    $value.extensions,
+    (v, t) => ObjectCopyWith(v, $identity, t),
+    (v) => call(extensions: v),
+  );
+  @override
   ListCopyWith<$R, Violation, ViolationCopyWith<$R, Violation, Violation>>
   get violations => ListCopyWith(
     $value.violations,
@@ -557,6 +601,7 @@ class _HttpValidationProblemCopyWithImpl<$R, $Out>
     Object? detail = $none,
     Object? details = $none,
     Object? instance = $none,
+    Map<String, dynamic>? extensions,
     List<Violation>? violations,
   }) => $apply(
     FieldCopyWithData({
@@ -566,6 +611,7 @@ class _HttpValidationProblemCopyWithImpl<$R, $Out>
       if (detail != $none) #detail: detail,
       if (details != $none) #details: details,
       if (instance != $none) #instance: instance,
+      if (extensions != null) #extensions: extensions,
       if (violations != null) #violations: violations,
     }),
   );
@@ -577,6 +623,7 @@ class _HttpValidationProblemCopyWithImpl<$R, $Out>
     detail: data.get(#detail, or: $value.detail),
     details: data.get(#details, or: $value.details),
     instance: data.get(#instance, or: $value.instance),
+    extensions: data.get(#extensions, or: $value.extensions),
     violations: data.get(#violations, or: $value.violations),
   );
 

@@ -1,7 +1,10 @@
 import 'package:auto_injector/auto_injector.dart';
 
+import 'error_policy.dart';
+import 'notice.dart';
 import 'route_table.dart';
 import 'router.dart';
+import 'service/navigation_service.dart';
 import 'service/post_auth_redirect_store.dart';
 
 /// An abstract delegate responsible for parsing a URI into a concrete
@@ -39,4 +42,10 @@ abstract class AppCoordinatorDelegate extends NavigationServiceDelegate {
   /// The store NavigationService keeps the post-auth redirect in.
   PostAuthRedirectStore createPostAuthRedirectStore() =>
       InMemoryPostAuthRedirectStore();
+
+  ErrorPolicy createErrorPolicy(
+    NoticeService notices,
+    NavigationService navigation,
+  ) =>
+      ErrorPolicy(notices, navigation);
 }

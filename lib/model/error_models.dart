@@ -19,6 +19,9 @@ class HttpProblem with HttpProblemMappable {
   final String? instance;
   final List<String>? details;
 
+  /// Members the problem JSON carried that are not named fields above.
+  final Map<String, dynamic> extensions;
+
   const HttpProblem({
     this.type,
     this.title,
@@ -26,6 +29,7 @@ class HttpProblem with HttpProblemMappable {
     this.detail,
     this.instance,
     this.details,
+    this.extensions = const <String, dynamic>{},
   });
 }
 
@@ -54,6 +58,7 @@ class HttpValidationProblem extends HttpProblem
     super.detail,
     super.details,
     super.instance,
+    super.extensions,
     this.violations = const [],
   });
 }
