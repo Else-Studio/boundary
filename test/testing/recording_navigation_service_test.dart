@@ -58,22 +58,24 @@ void main() {
       );
 
   group('recording', () {
-    test('every request is recorded in order', () {
+    test('every request is recorded in order', () async {
       final navigation = service();
       addTearDown(navigation.dispose);
 
       navigation.navigateTo(const _A());
       navigation.navigateTo(const _B());
       navigation.navigateBackOrLogin();
+      await pumpEventQueue();
 
       expect(navigation.requests, [const _A(), const _B(), const _B()]);
     });
 
-    test('back with nothing shown falls back to the login route', () {
+    test('back with nothing shown falls back to the login route', () async {
       final navigation = service();
       addTearDown(navigation.dispose);
 
       navigation.navigateBackOrLogin();
+      await pumpEventQueue();
 
       expect(navigation.requests, [const _Login()]);
     });
