@@ -108,6 +108,12 @@
 *   `TokenVerifier` and `JwksTokenVerifier` verify access tokens (JWKS RS256 by `kid`).
 *   `SharedPreferencesPostAuthRedirectStore` keeps the post-auth redirect across an OAuth page leave, with a 5-minute lifetime.
 *   Removed: the `flutter_dotenv` dependency.
+*   `testing.dart` is a new entry library (not exported from `boundary.dart`) with test doubles for apps; it does not depend on `flutter_test`.
+*   `pumpEventQueue()` runs queued microtasks and zero-delay timers in a test without `flutter_test`.
+*   `FakeAuthService` is a controllable `AuthService` and `AccessTokenProvider` for tests.
+*   `RecordingNavigationService` is a real `NavigationService` that records every request it emits.
+*   `FakeHttpBackend` serves canned responses to an `HttpService` and records the requests it receives.
+*   `ControllerHarness` dispatches actions to a controller to the end and records its streams.
 
 ## 0.4.1
 

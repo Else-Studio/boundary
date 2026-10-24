@@ -7,7 +7,9 @@ class FakeAuthService implements AuthService {
   FakeAuthService({
     AuthState initial = const AuthUnknown(),
     this.token,
-  });
+  }) : _authState = BehaviorSubject<AuthState>.seeded(initial);
+
+  final BehaviorSubject<AuthState> _authState;
 
   /// What [accessToken] returns.
   String? token;
@@ -16,45 +18,65 @@ class FakeAuthService implements AuthService {
   /// [SignedOutReason.expired], clear [token], return null.
   Future<String?> Function(String rejectedToken)? onUnauthorized;
 
+  int _initializeCalls = 0;
+  int _signOutCalls = 0;
+  final List<String> _rejectedTokens = [];
+
   /// How often [initialize] was called.
-  int get initializeCalls => throw UnimplementedError('not implemented');
+  int get initializeCalls => _initializeCalls;
 
   /// How often [signOut] was called.
-  int get signOutCalls => throw UnimplementedError('not implemented');
+  int get signOutCalls => _signOutCalls;
 
   /// The tokens passed to [refreshAfterUnauthorized], in order.
-  List<String> get rejectedTokens => throw UnimplementedError('not implemented');
+  List<String> get rejectedTokens => List.unmodifiable(_rejectedTokens);
 
   /// Sets [token] and emits [Authenticated] for [session].
   void signIn({
     AuthSession session = const AuthSession(subject: 'test-user'),
     String token = 'test-token',
   }) {
-    throw UnimplementedError('not implemented');
+    this.token = token;
+    emit(Authenticated(session));
   }
 
   /// Emits [state] as is.
   void emit(AuthState state) {
-    throw UnimplementedError('not implemented');
+    if (_authState.isClosed) return;
+    _authState.add(state);
   }
 
   @override
-  ValueStream<AuthState> get authState =>
-      throw UnimplementedError('not implemented');
+  ValueStream<AuthState> get authState => _authState.stream;
 
   @override
-  Future<String?> accessToken() => throw UnimplementedError('not implemented');
+  Future<String?> accessToken() async => token;
 
   @override
-  Future<void> initialize() => throw UnimplementedError('not implemented');
+  Future<void> initialize() async {
+    _initializeCalls++;
+  }
 
   @override
-  Future<String?> refreshAfterUnauthorized(String rejectedToken) =>
-      throw UnimplementedError('not implemented');
+  Future<String?> refreshAfterUnauthorized(String rejectedToken) async {
+    _rejectedTokens.add(rejectedToken);
+    final handler = onUnauthorized;
+    if (handler != null) return handler(rejectedToken);
+
+    token = null;
+    emit(const SignedOut(SignedOutReason.expired));
+    return null;
+  }
 
   @override
-  Future<void> signOut() => throw UnimplementedError('not implemented');
+  Future<void> signOut() async {
+    _signOutCalls++;
+    token = null;
+    emit(const SignedOut(SignedOutReason.signedOut));
+  }
 
   @override
-  void dispose() => throw UnimplementedError('not implemented');
+  void dispose() {
+    _authState.close();
+  }
 }

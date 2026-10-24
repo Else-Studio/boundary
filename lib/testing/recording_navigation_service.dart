@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../app_coordinator_delegate.dart';
 import '../route_table.dart';
 import '../router.dart';
@@ -12,15 +14,28 @@ class RecordingNavigationService extends NavigationService {
   }) : super(
           delegate: _RecordingDelegate(loginRoute, homeRoute),
           routes: RouteTable(routes),
-        );
+        ) {
+    _subscription = routeRequestStream.listen((route) {
+      if (route == null) return;
+      _requests.add(route);
+    });
+  }
+
+  final List<ConfigurationBase> _requests = [];
+  late final StreamSubscription<ConfigurationBase?> _subscription;
 
   /// Every route emitted on [routeRequestStream], in order (nulls left out).
-  List<ConfigurationBase> get requests =>
-      throw UnimplementedError('not implemented');
+  List<ConfigurationBase> get requests => List.unmodifiable(_requests);
 
   /// Tells the service what the app shows.
   void show(ConfigurationBase? base, {ConfigurationBase? modal}) {
-    throw UnimplementedError('not implemented');
+    onRouteResolved(base: base, modal: modal);
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 }
 
