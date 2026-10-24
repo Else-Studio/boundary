@@ -2,16 +2,20 @@
 
 import 'package:auto_injector/auto_injector.dart';
 import 'package:boundary/app_coordinator.dart';
+import 'package:boundary/controller.dart';
 import 'package:boundary/error_policy.dart';
 import 'package:boundary/forms.dart';
 import 'package:boundary/model/error_models.dart';
 import 'package:boundary/notice.dart';
 import 'package:boundary/oauth.dart';
+import 'package:boundary/route_table.dart';
+import 'package:boundary/router.dart';
 import 'package:boundary/service/auth_service.dart';
 import 'package:boundary/service/http_service.dart';
 import 'package:boundary/service/locale_service.dart';
 import 'package:boundary/service/navigation_service.dart';
 import 'package:boundary/service/stored_token_auth_service.dart';
+import 'package:boundary/testing.dart';
 import 'package:http/http.dart' as http;
 import 'package:reactive_forms/reactive_forms.dart';
 
@@ -52,16 +56,49 @@ class SutFactory {
 
   /// Creates an [HttpService] instance with its dependencies resolved.
   ///
-  /// By default, it uses a mock [AuthService] as the token provider.
-  /// A custom [MockDependencyProvider] can be passed in to override
-  /// the default mock behavior for specific test cases.
-  static HttpService createHttpService({MockDependencyProvider? provider}) {
+  /// By default, it uses a mock [AuthService] as the token provider and the
+  /// provider's mock client. Pass [tokens] and [client] to use the test doubles
+  /// from `package:boundary/testing.dart` instead.
+  static HttpService createHttpService({
+    MockDependencyProvider? provider,
+    AccessTokenProvider? tokens,
+    http.BaseClient? client,
+  }) {
     final effectiveProvider = provider ?? MockDependencyProvider();
     return HttpService(
-      effectiveProvider.mockAuthService,
-      effectiveProvider.mockHttpClient,
+      tokens ?? effectiveProvider.mockAuthService,
+      client ?? effectiveProvider.mockHttpClient,
     );
   }
+
+  /// Creates a controllable [FakeAuthService].
+  static FakeAuthService createFakeAuthService({
+    AuthState initial = const AuthUnknown(),
+    String? token,
+  }) =>
+      FakeAuthService(initial: initial, token: token);
+
+  /// Creates a [RecordingNavigationService] with the given login and home
+  /// routes and the routes the app binds.
+  static RecordingNavigationService createRecordingNavigationService({
+    required ConfigurationBase loginRoute,
+    required ConfigurationBase homeRoute,
+    List<RouteBinding> routes = const [],
+  }) =>
+      RecordingNavigationService(
+        loginRoute: loginRoute,
+        homeRoute: homeRoute,
+        routes: routes,
+      );
+
+  /// Creates an empty [FakeHttpBackend].
+  static FakeHttpBackend createFakeHttpBackend() => FakeHttpBackend();
+
+  /// Creates a [ControllerHarness] around [controller].
+  static ControllerHarness<A, C> createControllerHarness<A, C extends Controller<A>>(
+    C controller,
+  ) =>
+      ControllerHarness<A, C>(controller);
 
   /// Creates a [StoredTokenAuthService] around the given fakes.
   static StoredTokenAuthService<C> createStoredTokenAuthService<C>({
