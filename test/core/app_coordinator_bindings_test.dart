@@ -237,6 +237,7 @@ void main() {
     testWidgets(
         'with no state the fallback is built from the ErrorRoute binding',
         (tester) async {
+      authStream.add(const SignedOut(SignedOutReason.noSession));
       createCoordinator(<RouteBinding>[
         caseBinding(),
         RouteBinding<ErrorRoute, CaseController>(
@@ -253,12 +254,14 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
 
       final content = coordinator.getBaseContentWidget();
+      final again = coordinator.getBaseContentWidget();
 
       expect(errorControllers, hasLength(1));
       final entered = errorControllers.single.entered;
       expect(entered, hasLength(1));
       expect(entered.single, isA<ErrorRoute>());
-      expect((entered.single as ErrorRoute).message, 'error.app.noState');
+      expect((entered.single as ErrorRoute).message,
+          'The app could not decide which page to show.');
 
       await pumpContent(tester, content);
 
@@ -267,6 +270,10 @@ void main() {
         find.text('case ${errorControllers.single.hashCode}'),
         findsOneWidget,
       );
+
+      await pumpContent(tester, again);
+
+      expect(errorControllers, hasLength(1));
     });
 
     RouteBinding<ErrorRoute, CaseController> errorBinding() =>

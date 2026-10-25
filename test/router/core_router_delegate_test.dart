@@ -8,6 +8,10 @@
 //   - test: system back on a base page asks NavigationService to go up
 //   - test: system back at a top route leaves the app
 //   - test: system back on a modal pops it and does not go up
+//
+// group: 'CoreRouterDelegate empty frame'
+//   - test: an empty router shows the coordinator loading scaffold
+//   - test: an empty router shows the no-state page once auth is known
 
 import 'package:boundary/boundary.dart';
 import 'package:flutter/material.dart';
@@ -268,6 +272,81 @@ void main() {
       verify(provider.mockNavigationService.navigateUp()).called(1);
       verifyNever(provider.mockNavigationService.dismissModal());
       expect(coordinator.modalConfiguration, isA<FakeNoteModalRoute>());
+    });
+  });
+
+  group('CoreRouterDelegate empty frame', () {
+    late MockDependencyProvider provider;
+    late BehaviorSubject<AuthState> authStream;
+    late BehaviorSubject<ConfigurationBase> navStream;
+
+    setUp(() async {
+      provider = MockDependencyProvider();
+      await SutFactory.initTestBed(provider: provider);
+
+      authStream =
+          BehaviorSubject.seeded(Authenticated(ModelFactory.createSession()));
+      navStream = BehaviorSubject();
+      when(provider.mockAuthService.authState)
+          .thenAnswer((_) => authStream.stream);
+      when(provider.mockNavigationService.routeRequestStream)
+          .thenAnswer((_) => navStream.stream);
+      when(provider.mockAppCoordinatorDelegate.routes).thenReturn([
+        RouteBinding<FakeBaseRoute, MockController>(
+          path: '/base',
+          parse: (_) => FakeBaseRoute(),
+          controller: (_) => provider.mockController,
+          page: const SizedBox(),
+        ),
+      ]);
+    });
+
+    tearDown(() {
+      authStream.close();
+      navStream.close();
+    });
+
+    /// Pumps a router whose coordinator has [authState] and no nav request.
+    Future<void> pumpEmptyRouter(
+      WidgetTester tester,
+      AuthState authState,
+    ) async {
+      authStream.add(authState);
+      final emptyCoordinator =
+          SutFactory.createAppCoordinator(provider: provider);
+      final emptyDelegate = CoreRouterDelegate(
+        appCoordinator: emptyCoordinator,
+        pageBuilder: TestPageBuilder(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: Router(routerDelegate: emptyDelegate)),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('an empty router shows the coordinator loading scaffold',
+        (tester) async {
+      await pumpEmptyRouter(tester, const AuthUnknown());
+
+      expect(
+        find.byKey(const ValueKey('AppCoordinatorLoadingBase-Generic')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('LoadingOrErrorPage')), findsNothing);
+    });
+
+    testWidgets('an empty router shows the no-state page once auth is known',
+        (tester) async {
+      await pumpEmptyRouter(
+        tester,
+        const SignedOut(SignedOutReason.noSession),
+      );
+
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(
+        find.text('The app could not decide which page to show.'),
+        findsOneWidget,
+      );
     });
   });
 }

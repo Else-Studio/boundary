@@ -290,7 +290,9 @@ void main() {
           final route = coordinator.baseConfiguration;
           expect(route, isA<ErrorRoute>());
           expect((route as ErrorRoute).isSessionTermination, isTrue);
-          expect(route.message, 'error.session.unexpected');
+          expect(route.message, 'The session could not be checked.');
+          expect(route.problem?.title, 'Auth state error');
+          expect(route.problem?.detail, contains('broken'));
         },
       );
 

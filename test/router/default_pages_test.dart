@@ -133,11 +133,11 @@ void main() {
         (tester) async {
       createRouter([caseBinding]);
 
-      await emit(tester, const ErrorRoute(message: 'error.session.unexpected'));
+      await emit(tester, const ErrorRoute(message: 'Broken axle'));
       await pumpRouter(tester);
 
       expect(find.text('Something went wrong'), findsOneWidget);
-      expect(find.text('error.session.unexpected'), findsOneWidget);
+      expect(find.text('Broken axle'), findsOneWidget);
 
       await tapBack(tester);
 

@@ -338,7 +338,7 @@ void main() {
             await show(signedIn, const CasesRoute(), guards: [guard]);
 
         expect(coordinator.baseConfiguration,
-            errorRouteWith('error.navigation.redirectLoop'));
+            errorRouteWith('Opening that page kept redirecting.'));
         expect(guard.seen, hasLength(6));
       });
 
@@ -353,7 +353,7 @@ void main() {
             await show(signedIn, const CasesRoute(), guards: [guard]);
 
         expect(coordinator.baseConfiguration,
-            errorRouteWith('error.navigation.guardFailed'));
+            errorRouteWith('A page check failed.'));
       });
 
       test('a guard that fails asynchronously gives an error page', () async {
@@ -369,7 +369,7 @@ void main() {
             await show(signedIn, const CasesRoute(), guards: [guard]);
 
         expect(coordinator.baseConfiguration,
-            errorRouteWith('error.navigation.guardFailed'));
+            errorRouteWith('A page check failed.'));
       });
 
       test('guards are created once', () async {
