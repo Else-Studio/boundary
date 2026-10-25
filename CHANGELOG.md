@@ -114,6 +114,8 @@
 *   `RecordingNavigationService` is a real `NavigationService` that records every request it emits.
 *   `FakeHttpBackend` serves canned responses to an `HttpService` and records the requests it receives.
 *   `ControllerHarness` dispatches actions to a controller to the end and records its streams.
+*   Removed: `NavigationService.retryLastNavigation`; call `dismissModal()` instead.
+*   Removed: `NavigationService.clearRequest`; the coordinator ignores a null request.
 
 ## 0.4.1
 

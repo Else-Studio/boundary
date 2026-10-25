@@ -95,7 +95,7 @@ class NavigationService {
     final uri = await _redirectStore.take();
     if (uri == null) return null;
     if (uri.path == '/') {
-      _logger.info('Attempted to go HomeRoute from Post login flow');
+      _logger.info('Dropping a stored redirect to $uri');
       return null;
     }
     _logger.info('Found post-auth redirect to: $uri');

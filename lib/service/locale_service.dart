@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils.dart'; // For logger
-import 'locale_changer.dart' if (dart.libary.html) 'html_locale_changer.dart';
+import 'locale_changer.dart' if (dart.library.html) 'html_locale_changer.dart';
 
 // Not wired: locale choice and persistence belong to the app. Playrecord does not switch languages. Kept as a reference.
 

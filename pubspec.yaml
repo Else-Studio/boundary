@@ -1,5 +1,5 @@
 name: boundary
-description: The core framework package for the boundary application.
+description: A Flutter framework for controllers, routing, and forms.
 version: 0.5.0
 publish_to: "none"
 

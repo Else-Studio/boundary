@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:boundary/utils.dart';
 import 'package:flutter/foundation.dart' show protected;
 import 'package:http/http.dart' as http;
 
 import '../model/app_config.dart';
 import '../model/error_models.dart';
+import '../utils.dart';
 import 'http_service.dart';
 
 // ===================================================================
@@ -96,10 +96,7 @@ class DataParsingException extends ApiException {
 // 2. The Base API Client (The Generic Engine)
 //    - This abstract class provides the shared implementation for any API
 //      client that communicates over HTTP.
-//    - The application-specific client (e.g., `LiveApiClient`) will EXTEND this class.
-//    - The application will also define its own separate contract, e.g.,
-//      `abstract class ApiClient { ... }`, which both `LiveApiClient` and
-//      `SimulatedApiClient` will IMPLEMENT.
+//    - An app's own client extends this class.
 // ===================================================================
 abstract class BaseApiClient with ApiUriBuilder {
   final HttpService httpService;
@@ -119,29 +116,13 @@ abstract class BaseApiClient with ApiUriBuilder {
     required Future<http.Response> Function() request,
     required T Function(String body) parser,
     String resourceName = 'Resource',
-  }) async {
-    try {
-      final response = await request();
-
-      if (response.body.isEmpty) {
-        // A non-nullable type expects a non-empty body.
-        // `null is T` is a static check to see if the type `T` is nullable.
-        if (null is T) {
-          return null as T;
-        }
-        throw DataParsingException(
-          "Response body was empty for $resourceName, but a non-nullable type was expected.",
-        );
-      }
-
-      return parser(response.body);
-    } on ClientNetworkException catch (e) {
-      throw NetworkException(details: e.toString());
-    } on HttpException catch (e) {
-      throw _handleHttpException(e, resourceName: resourceName);
-    } on FormatException catch (e) {
-      throw DataParsingException("Bad JSON for $resourceName: ${e.message}");
-    }
+  }) {
+    return _performRequest(
+      request: request,
+      parser: _stringBodyParser(parser, resourceName),
+      resourceName: resourceName,
+      catchFormatException: true,
+    );
   }
 
   /// Multipart variant for file uploads.
@@ -150,25 +131,13 @@ abstract class BaseApiClient with ApiUriBuilder {
     required Future<http.Response> Function() request,
     required T Function(String body) parser,
     String resourceName = 'Resource',
-  }) async {
-    try {
-      final response = await request();
-
-      if (response.body.isEmpty) {
-        if (null is T) return null as T;
-        throw DataParsingException(
-          "Response body was empty for $resourceName, but a non-nullable type was expected.",
-        );
-      }
-
-      return parser(response.body);
-    } on ClientNetworkException catch (e) {
-      throw NetworkException(details: e.toString());
-    } on HttpException catch (e) {
-      throw _handleHttpException(e, resourceName: resourceName);
-    } on FormatException catch (e) {
-      throw DataParsingException("Bad JSON for $resourceName: ${e.message}");
-    }
+  }) {
+    return _performRequest(
+      request: request,
+      parser: _stringBodyParser(parser, resourceName),
+      resourceName: resourceName,
+      catchFormatException: true,
+    );
   }
 
   @protected
@@ -176,6 +145,24 @@ abstract class BaseApiClient with ApiUriBuilder {
     required Future<http.Response> Function() request,
     required T Function(http.Response response) parser,
     String resourceName = 'Resource',
+  }) {
+    return _performRequest(
+      request: request,
+      parser: parser,
+      resourceName: resourceName,
+      catchFormatException: false,
+    );
+  }
+
+  /// The shared request path: one `try-catch` for every public variant.
+  ///
+  /// [catchFormatException] is false for the raw variant, which hands the
+  /// response to its parser as-is.
+  Future<T> _performRequest<T>({
+    required Future<http.Response> Function() request,
+    required T Function(http.Response response) parser,
+    required String resourceName,
+    required bool catchFormatException,
   }) async {
     try {
       final response = await request();
@@ -184,7 +171,28 @@ abstract class BaseApiClient with ApiUriBuilder {
       throw NetworkException(details: e.toString());
     } on HttpException catch (e) {
       throw _handleHttpException(e, resourceName: resourceName);
+    } on FormatException catch (e) {
+      if (!catchFormatException) rethrow;
+      throw DataParsingException("Bad JSON for $resourceName: ${e.message}");
     }
+  }
+
+  /// Parses a string body, rejecting an empty one for a non-nullable type.
+  T Function(http.Response) _stringBodyParser<T>(
+    T Function(String body) parser,
+    String resourceName,
+  ) {
+    return (response) {
+      // A non-nullable type expects a non-empty body.
+      // `null is T` is a static check to see if the type `T` is nullable.
+      if (response.body.isEmpty) {
+        if (null is T) return null as T;
+        throw DataParsingException(
+          "Response body was empty for $resourceName, but a non-nullable type was expected.",
+        );
+      }
+      return parser(response.body);
+    };
   }
 
   /// Maps raw `HttpException`s to specific `ApiException`s.
