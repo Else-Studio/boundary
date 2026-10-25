@@ -119,6 +119,8 @@
 *   `ErrorRoute.message` from the coordinator is an English sentence: "The session could not be checked.", "A page check failed.", "Opening that page kept redirecting." and "The app could not decide which page to show.".
 *   `CoreRouterDelegate` shows the coordinator's own base widget when there is no base configuration, instead of its own spinner.
 *   Removed: `NoAnimationTransitionDelegate`; `NoAnimationPage` and `TransparentModalPage` stay.
+*   `AppFormatters` moved to `formatters.dart`; it is no longer exported from `boundary.dart`.
+*   Removed: `Failure.messageKey`; `Failure.toString()` prints only the error.
 
 ## 0.4.1
 
