@@ -327,15 +327,6 @@ class MockNavigationService extends _i1.Mock implements _i12.NavigationService {
       ) as _i10.Future<void>);
 
   @override
-  void retryLastNavigation() => super.noSuchMethod(
-        Invocation.method(
-          #retryLastNavigation,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
   void navigateTo(_i8.ConfigurationBase? configuration) => super.noSuchMethod(
         Invocation.method(
           #navigateTo,
@@ -360,15 +351,6 @@ class MockNavigationService extends _i1.Mock implements _i12.NavigationService {
         Invocation.method(
           #syncBaseConfiguration,
           [configuration],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void clearRequest() => super.noSuchMethod(
-        Invocation.method(
-          #clearRequest,
-          [],
         ),
         returnValueForMissingStub: null,
       );

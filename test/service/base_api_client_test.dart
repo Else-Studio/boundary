@@ -22,6 +22,20 @@ class _TestApiClient extends BaseApiClient {
       parser: (body) => body,
     );
   }
+
+  Future<String> runMultipart(Future<http.Response> Function() request) {
+    return performMultipartRequest<String>(
+      request: request,
+      parser: (body) => body,
+    );
+  }
+
+  Future<http.Response> runRaw(Future<http.Response> Function() request) {
+    return performRawRequest<http.Response>(
+      request: request,
+      parser: (response) => response,
+    );
+  }
 }
 
 void main() {
@@ -70,5 +84,38 @@ void main() {
         'got SessionTerminatedException(${e.message})',
       );
     }
+  });
+
+  test('a multipart request maps a 404 to a missing resource', () async {
+    await expectLater(
+      client.runMultipart(
+        () async => throw HttpException(http.Response('', 404)),
+      ),
+      throwsA(isA<ResourceNotFoundException>()),
+    );
+  });
+
+  test('a raw request maps a 404 to a missing resource', () async {
+    await expectLater(
+      client.runRaw(
+        () async => throw HttpException(http.Response('', 404)),
+      ),
+      throwsA(isA<ResourceNotFoundException>()),
+    );
+  });
+
+  test('a raw request does not turn a parse failure into a parsing error',
+      () async {
+    Future<http.Response> failing() async =>
+        throw const FormatException('not json');
+
+    await expectLater(
+      client.run(failing),
+      throwsA(isA<DataParsingException>()),
+    );
+    await expectLater(
+      client.runRaw(failing),
+      throwsA(isA<FormatException>()),
+    );
   });
 }

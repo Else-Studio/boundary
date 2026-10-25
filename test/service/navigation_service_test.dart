@@ -141,6 +141,15 @@ class _NoteModalRoute extends ConfigurationBase {
   Map<String, String> get params => {'id': '$id'};
 }
 
+class _RootRoute extends ConfigurationBase {
+  static const String path = '/';
+
+  const _RootRoute();
+
+  @override
+  String get pathTemplate => path;
+}
+
 class _CasesRoute extends ConfigurationBase {
   static const String path = '/cases';
 
@@ -327,6 +336,39 @@ void main() {
 
     test('a stored root redirect gives no route', () async {
       expect(await consumeStored('/'), isNull);
+    });
+
+    test('a stored root redirect is dropped even when the root path is bound',
+        () async {
+      final store = InMemoryPostAuthRedirectStore();
+      await store.save(Uri.parse('/'));
+      final service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: RouteTable([
+          _bind<_RootRoute>('/', (_) => const _RootRoute()),
+        ]),
+        redirectStore: store,
+      );
+      addTearDown(service.dispose);
+
+      expect(await service.consumePostAuthRedirect(), isNull);
+    });
+
+    test('a stored case redirect keeps its path parameter', () async {
+      final store = InMemoryPostAuthRedirectStore();
+      await store.save(Uri.parse('/cases/7'));
+      final service = NavigationService(
+        delegate: const _TestDelegate(_TestRoute('/login')),
+        routes: RouteTable([_caseBinding]),
+        redirectStore: store,
+      );
+      addTearDown(service.dispose);
+
+      final route = await service.consumePostAuthRedirect();
+
+      expect(route, const _CaseRoute(7));
+      expect((route as _CaseRoute).id, 7);
+      expect(route.uri, Uri.parse('/cases/7'));
     });
 
     test('the default redirect is kept in memory and taken once', () async {

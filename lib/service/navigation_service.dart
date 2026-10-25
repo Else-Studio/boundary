@@ -108,11 +108,6 @@ class NavigationService {
     _logger.info('Cleared post-authentication redirect intent.');
   }
 
-  void retryLastNavigation() {
-    _logger.debug("Request received to retry last navigation.");
-    dismissModal();
-  }
-
   void navigateTo(ConfigurationBase configuration) {
     _logger.debug(
       "Request received to navigate to: ${configuration.runtimeType}",
@@ -141,10 +136,6 @@ class NavigationService {
           "Synchronized last base route to: ${configuration.runtimeType}");
       _lastBaseConfiguration = configuration;
     }
-  }
-
-  void clearRequest() {
-    _routeRequest$.add(null);
   }
 
   /// Navigates to the last known base route, or to login when there is no
