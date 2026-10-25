@@ -13,14 +13,13 @@ void main() {
   });
 
   group('Failure', () {
-    test('carries its error and message key', () {
-      final result =
-          Failure<int>(StateError('no session'), messageKey: 'error.session');
+    test('prints its error and nothing else', () {
+      final result = Failure<int>(StateError('no session'));
 
       expect(result, isA<AsyncResult<int>>());
+      expect(result.toString(), 'Failure(Bad state: no session)');
       expect(result.dataOrNull, isNull);
       expect(result.error, isA<StateError>());
-      expect(result.messageKey, 'error.session');
       expect(result.stackTrace, isNull);
     });
   });

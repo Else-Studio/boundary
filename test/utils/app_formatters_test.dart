@@ -1,4 +1,4 @@
-import 'package:boundary/boundary.dart';
+import 'package:boundary/formatters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

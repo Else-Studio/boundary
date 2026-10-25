@@ -123,12 +123,11 @@ class Data<T> extends AsyncResult<T> {
 
 class Failure<T> extends AsyncResult<T> {
   final Object error;
-  final String? messageKey;
   final StackTrace? stackTrace;
-  const Failure(this.error, {this.stackTrace, this.messageKey});
+  const Failure(this.error, {this.stackTrace});
 
   @override
-  String toString() => 'Failure($error, messageKey: $messageKey)';
+  String toString() => 'Failure($error)';
 }
 
 /// A centralized class for handling date, number, and currency formatting.
