@@ -1,6 +1,3 @@
-import 'package:flutter/foundation.dart' show protected;
-
-import 'controller.dart';
 import 'notice.dart';
 import 'router.dart';
 import 'service/base_api_client.dart';
@@ -74,14 +71,4 @@ class ErrorPolicy {
 
     notices.show(Notice(messageFor(error), level: levelFor(error)));
   }
-}
-
-/// A controller whose errors go through [errorPolicy].
-mixin PolicyErrors<A> on Controller<A> {
-  ErrorPolicy get errorPolicy;
-
-  @override
-  @protected
-  void onError(Object error, StackTrace stackTrace) =>
-      errorPolicy.handle(error, stackTrace);
 }

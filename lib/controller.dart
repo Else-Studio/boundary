@@ -78,18 +78,10 @@ abstract class Controller<A> {
   FutureOr<void> handleAction(A action);
 
   /// Receives every error thrown by [handleAction], sync or async, including
-  /// one that completes after [dispose]. Default: forwards to the parent's
-  /// [onError] when this controller has a parent (by [adopt] or by a [slot])
-  /// and is not disposed; otherwise logs with `appLogger.error`. An error
-  /// that arrives after this child was disposed is logged, never forwarded.
-  /// Never rethrow from here.
+  /// one that completes after [dispose]. Default: logs with
+  /// `appLogger.error`. Never rethrow from here.
   @protected
   void onError(Object error, StackTrace stackTrace) {
-    final parent = _parent;
-    if (parent != null && !_isDisposed) {
-      parent.onError(error, stackTrace);
-      return;
-    }
     appLogger.error(
       'Unhandled error in $runtimeType action: $error',
       error,

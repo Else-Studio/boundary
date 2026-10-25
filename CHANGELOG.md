@@ -121,6 +121,8 @@
 *   Removed: `NoAnimationTransitionDelegate`; `NoAnimationPage` and `TransparentModalPage` stay.
 *   `AppFormatters` moved to `formatters.dart`; it is no longer exported from `boundary.dart`.
 *   Removed: `Failure.messageKey`; `Failure.toString()` prints only the error.
+*   A child controller's default `onError` logs the error and does not forward it to the parent.
+*   Removed: the `PolicyErrors` mixin; a controller overrides `onError` and calls `ErrorPolicy.handle`.
 
 ## 0.4.1
 
