@@ -168,7 +168,10 @@ void main() {
   });
 
   group('adopted child errors', () {
-    test('an adopted child error reaches the parent', () async {
+    test('an adopted child error does not reach the parent', () async {
+      final savedLevel = boundaryLogLevel;
+      boundaryLogLevel = LogLevel.critical;
+      addTearDown(() => boundaryLogLevel = savedLevel);
       final parent = ParentController();
       addTearDown(parent.dispose);
       final child = ChildController();
@@ -177,10 +180,9 @@ void main() {
       child.dispatch('fail');
       await pumpEventQueue();
 
-      expect(
-        parent.errors.map((e) => e.toString()),
-        [StateError('child').toString()],
-      );
+      expect(parent.errors, isEmpty);
+      expect(child.isDisposed, isFalse);
+      expect(child.disposeCount, 0);
     });
 
     test('a self-handling adopted child keeps its error', () async {
@@ -323,7 +325,10 @@ void main() {
   });
 
   group('slot child errors', () {
-    test('a living slot child error reaches the parent', () async {
+    test('a living slot child error does not reach the parent', () async {
+      final savedLevel = boundaryLogLevel;
+      boundaryLogLevel = LogLevel.critical;
+      addTearDown(() => boundaryLogLevel = savedLevel);
       final parent = ParentController();
       addTearDown(parent.dispose);
       final slot = parent.slotIt<int, ChildController>(
@@ -333,10 +338,7 @@ void main() {
       slot.activate(7).dispatch('fail');
       await pumpEventQueue();
 
-      expect(
-        parent.errors.map((e) => e.toString()),
-        [StateError('child').toString()],
-      );
+      expect(parent.errors, isEmpty);
     });
 
     test('an error from a replaced slot child does not reach the parent',

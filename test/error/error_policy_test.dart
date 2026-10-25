@@ -22,11 +22,15 @@ class CasePolicy extends ErrorPolicy {
 }
 
 /// Sends action errors through [errorPolicy].
-class PolicyController extends Controller<String> with PolicyErrors<String> {
+class PolicyController extends Controller<String> {
   PolicyController(this.errorPolicy);
 
-  @override
   final ErrorPolicy errorPolicy;
+
+  @override
+  void onError(Object error, StackTrace stackTrace) {
+    errorPolicy.handle(error, stackTrace);
+  }
 
   @override
   FutureOr<void> handleAction(String action) async {
@@ -36,13 +40,11 @@ class PolicyController extends Controller<String> with PolicyErrors<String> {
 }
 
 /// Shows the policy's message on [inlineError] instead of posting a notice.
-class InlineErrorController extends Controller<String>
-    with PolicyErrors<String> {
+class InlineErrorController extends Controller<String> {
   InlineErrorController(this.errorPolicy) {
     own(inlineError);
   }
 
-  @override
   final ErrorPolicy errorPolicy;
 
   final BehaviorSubject<String?> inlineError = BehaviorSubject.seeded(null);
@@ -247,7 +249,7 @@ void main() {
     });
   });
 
-  test('a controller with PolicyErrors sends its errors to notices', () async {
+  test('a controller that calls the error policy sends notices', () async {
     final controller = PolicyController(policy);
     addTearDown(controller.dispose);
 
