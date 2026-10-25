@@ -160,7 +160,7 @@ class AppCoordinator extends ChangeNotifier {
       _logger.error("Auth state error: ${authState.error}");
       return ErrorRoute(
         isSessionTermination: true,
-        message: 'error.session.unexpected',
+        message: 'The session could not be checked.',
         problem: HttpProblem(
           title: 'Auth state error',
           detail: authState.error.toString(),
@@ -224,7 +224,7 @@ class AppCoordinator extends ChangeNotifier {
             error,
             stackTrace,
           );
-          return const ErrorRoute(message: 'error.navigation.guardFailed');
+          return const ErrorRoute(message: 'A page check failed.');
         }
         if (_isDisposed) return null;
       }
@@ -234,7 +234,7 @@ class AppCoordinator extends ChangeNotifier {
       if (redirects > _maxGuardRedirects) {
         _logger.error("Route guards redirected more than $_maxGuardRedirects "
             "times; last candidate ${candidate.runtimeType}");
-        return const ErrorRoute(message: 'error.navigation.redirectLoop');
+        return const ErrorRoute(message: 'Opening that page kept redirecting.');
       }
       candidate = redirect.route;
     }
@@ -250,7 +250,7 @@ class AppCoordinator extends ChangeNotifier {
     );
 
     final determinedConfig = await _resolve(authState, navRequest);
-    // null: no state change (the LoggedOut + protected row), or disposed.
+    // null: no state change (the signed out + protected row), or disposed.
     if (determinedConfig == null) return;
     if (_isDisposed) return;
 
@@ -391,7 +391,7 @@ class AppCoordinator extends ChangeNotifier {
         );
       }
       const route = ErrorRoute(
-        message: 'error.app.noState',
+        message: 'The app could not decide which page to show.',
         problem: HttpProblem(
           title: 'Application State Error',
           detail:

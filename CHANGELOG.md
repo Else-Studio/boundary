@@ -116,6 +116,9 @@
 *   `ControllerHarness` dispatches actions to a controller to the end and records its streams.
 *   Removed: `NavigationService.retryLastNavigation`; call `dismissModal()` instead.
 *   Removed: `NavigationService.clearRequest`; the coordinator ignores a null request.
+*   `ErrorRoute.message` from the coordinator is an English sentence: "The session could not be checked.", "A page check failed.", "Opening that page kept redirecting." and "The app could not decide which page to show.".
+*   `CoreRouterDelegate` shows the coordinator's own base widget when there is no base configuration, instead of its own spinner.
+*   Removed: `NoAnimationTransitionDelegate`; `NoAnimationPage` and `TransparentModalPage` stay.
 
 ## 0.4.1
 

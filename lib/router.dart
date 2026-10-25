@@ -285,20 +285,17 @@ class CoreRouterDelegate extends RouterDelegate<ConfigurationBase>
     final baseConfig = appCoordinator.baseConfiguration;
     final modalConfig = appCoordinator.modalConfiguration;
 
-    // Get the widget for the base configuration from AppCoordinator
-    Widget? baseWidget = appCoordinator.getBaseContentWidget();
+    // Get the widget for the base configuration from AppCoordinator. With no
+    // base configuration it is the coordinator's own empty frame: the loading
+    // scaffold, or the no-state error page.
+    final Widget baseWidget = appCoordinator.getBaseContentWidget();
 
     if (baseConfig != null) {
       // Delegate the entire Page creation to the platform-specific builder.
       pages.add(pageBuilder.buildBasePage(context, baseConfig, baseWidget));
     } else {
-      _logger.verbose("No valid base widget/config. Adding LoadingPage.");
-      pages.add(
-        const NoAnimationPage(
-          key: ValueKey('LoadingOrErrorPage'),
-          child: Scaffold(body: Center(child: CircularProgressIndicator())),
-        ),
-      );
+      _logger.verbose("No base configuration. Adding the coordinator frame.");
+      pages.add(NoAnimationPage(child: baseWidget));
     }
 
     Widget? modalContentWidget = appCoordinator.getModalContentWidget();
@@ -376,48 +373,6 @@ class NoAnimationPage<T> extends MaterialPage<T> {
       page: this,
       allowSnapshotting: allowSnapshotting,
     );
-  }
-}
-
-/// A transition delegate that applies no animations.
-class NoAnimationTransitionDelegate extends TransitionDelegate<void> {
-  const NoAnimationTransitionDelegate() : super();
-
-  @override
-  Iterable<RouteTransitionRecord> resolve({
-    required List<RouteTransitionRecord> newPageRouteHistory,
-    required Map<RouteTransitionRecord?, RouteTransitionRecord>
-        locationToExitingPageRoute,
-    required Map<RouteTransitionRecord?, List<RouteTransitionRecord>>
-        pageRouteToPagelessRoutes,
-  }) {
-    final List<RouteTransitionRecord> results = <RouteTransitionRecord>[];
-
-    for (final RouteTransitionRecord pageRoute in newPageRouteHistory) {
-      if (pageRoute.isWaitingForEnteringDecision) {
-        pageRoute.markForAdd();
-      }
-      results.add(pageRoute);
-    }
-
-    for (final RouteTransitionRecord exitingPageRoute
-        in locationToExitingPageRoute.values) {
-      if (exitingPageRoute.isWaitingForExitingDecision) {
-        exitingPageRoute.markForComplete();
-        final List<RouteTransitionRecord>? pagelessRoutes =
-            pageRouteToPagelessRoutes[exitingPageRoute];
-        if (pagelessRoutes != null) {
-          for (final RouteTransitionRecord pagelessRoute in pagelessRoutes) {
-            // FIX: Add this check to prevent marking a route for removal twice.
-            if (pagelessRoute.isWaitingForExitingDecision) {
-              pagelessRoute.markForComplete();
-            }
-          }
-        }
-      }
-      results.add(exitingPageRoute);
-    }
-    return results;
   }
 }
 
@@ -536,14 +491,5 @@ class _TransparentModalRoute<T> extends PopupRoute<T> {
       // ),
       child: child, // The widget built by buildPage
     );
-
-    // --- Alternative: Slide Up Transition ---
-    // return SlideTransition(
-    //     position: Tween<Offset>(
-    //       begin: const Offset(0.0, 0.3), // Start from slightly below
-    //       end: Offset.zero,
-    //     ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-    //     child: child,
-    //  );
   }
 }
