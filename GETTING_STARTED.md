@@ -498,12 +498,12 @@ class ShellLayout extends StatelessWidget {
 }
 
 final shell = LayoutBinding<ShellController>(
-  controller: (i) => ShellController(i.get<AuthService>()),
+  controller: (i) => i.get<ShellController>(),
   builder: (child) => ShellLayout(child: child),
 );
 ```
 
-The pages inside the layout build no `Scaffold` of their own.
+The pages inside the layout build no `Scaffold` of their own. The delegate registers `ShellController` in the next step.
 
 ## 9. The delegate
 
@@ -536,6 +536,13 @@ class AppDelegate extends AppCoordinatorDelegate {
     );
     injector.addInstance<AuthService>(auth);
     injector.addInstance<StoredTokenAuthService<LoginCredentials>>(auth);
+
+    // Controllers. `add` makes a new one each time a binding asks.
+    injector.add(SplashController.new);
+    injector.add(LoginController.new);
+    injector.add(ShellController.new);
+    injector.add(CasesController.new);
+    injector.add(CaseController.new);
   }
 
   @override
@@ -543,37 +550,27 @@ class AppDelegate extends AppCoordinatorDelegate {
         RouteBinding<RootRoute, SplashController>(
           path: RootRoute.path,
           parse: (_) => const RootRoute(),
-          controller: (_) => SplashController(),
+          controller: (i) => i.get<SplashController>(),
           page: const SplashPage(),
         ),
         RouteBinding<LoginRoute, LoginController>(
           path: LoginRoute.path,
           parse: (_) => const LoginRoute(),
-          controller: (i) => LoginController(
-            i.get<StoredTokenAuthService<LoginCredentials>>(),
-            i.get<ErrorPolicy>(),
-          ),
+          controller: (i) => i.get<LoginController>(),
           page: const LoginPage(),
           access: RouteAccess.guestOnly,
         ),
         RouteBinding<CasesRoute, CasesController>(
           path: CasesRoute.path,
           parse: (_) => const CasesRoute(),
-          controller: (i) => CasesController(
-            i.get<CaseRepository>(),
-            i.get<NavigationService>(),
-          ),
+          controller: (i) => i.get<CasesController>(),
           page: const CasesPage(),
           layout: shell,
         ),
         RouteBinding<CaseRoute, CaseController>(
           path: CaseRoute.path,
           parse: (params) => CaseRoute(int.parse(params['id']!)),
-          controller: (i) => CaseController(
-            i.get<CaseRepository>(),
-            i.get<NavigationService>(),
-            i.get<ErrorPolicy>(),
-          ),
+          controller: (i) => i.get<CaseController>(),
           page: const CasePage(),
           layout: shell,
         ),
@@ -596,7 +593,7 @@ A few things to notice:
 - **The auth service** is registered twice: as `AuthService` for the framework, and as `StoredTokenAuthService` for the login controller. Its login call finds `AuthApi` in the injector only when it runs. That breaks the cycle `AuthApi` → `HttpService` → `AuthService`.
 - **`SharedPreferencesCredentialStore` is not secure.** It stores the token in plain storage. Use it while developing, and supply a secure `CredentialStore` before you ship. See [doc/auth.md](doc/auth.md).
 - **`access`.** Routes are `protected` unless the binding says otherwise. Login is `guestOnly`, so a signed-in user who opens it goes to the cases list.
-- **Each binding builds its controller** from the injector with `i.get<T>()`. Route controllers are not registered themselves.
+- **Controllers are registered with `add`**, so each `get` makes a new one. The coordinator disposes a controller when its page goes, so never register a controller as a singleton. The injector fills each constructor's parameters by type, so a binding only asks for its controller with `i.get<T>()`. See [doc/architecture.md](doc/architecture.md), "Dependency injection".
 
 ## 10. main()
 

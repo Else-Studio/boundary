@@ -39,7 +39,7 @@ Why this split:
 
 1. Builds the `RouteTable` from `delegate.routes`. It appends the default error and not-found bindings unless the app binds those route types itself.
 2. Registers boundary's services in the injector: `NoticeService`, `NavigationService`, `ErrorPolicy` (from `delegate.createErrorPolicy`), an `http.Client` as `BaseClient`, and `HttpService`.
-3. Calls `delegate.registerDependencies(injector)`. The app registers its `AuthService`, its `AppConfig`, its API clients and other services here. `HttpService` asks the injector for an `AuthService`, so the app must register one.
+3. Calls `delegate.registerDependencies(injector)`. The app registers its `AuthService`, its `AppConfig`, its API clients, other services and its controllers here. `HttpService` asks the injector for an `AuthService`, so the app must register one.
 4. Commits the injector. Singletons are created now.
 5. Calls `delegate.createGuards(injector)` once.
 6. Starts listening to the auth state and to navigation requests, and calls `authService.initialize()`.
@@ -48,11 +48,39 @@ The platform then reports the start URL. `AppRouteInformationParser` parses it w
 
 ### Dependency injection
 
-The injector is `auto_injector`. Register with `addInstance<T>(object)`, `addSingleton<T>(constructor)` or `addLazySingleton<T>(constructor)`, and read with `injector.get<T>()`. A constructor tear-off, such as `addSingleton<CaseRepository>(CaseApi.new)`, has its parameters filled from the injector by type.
+The injector is `auto_injector`. Register in `registerDependencies`, before the commit, and read with `injector.get<T>()`:
+
+| Register with | You get | Use it for |
+|---|---|---|
+| `add(Constructor.new)` | A new object on every `get`. | Controllers. |
+| `addSingleton<T>(Constructor.new)` | One object, created at the commit. | Services and API clients. |
+| `addLazySingleton<T>(Constructor.new)` | One object, created at the first `get`. | Services that are costly to create and not always needed. |
+| `addInstance<T>(object)` | The object you built. | Config, and objects that need a hand-written setup. |
+
+**Give a constructor tear-off, not a closure.** For `CaseApi.new`, the injector reads the constructor's parameter types and fills each parameter with the registered object of that type. You do not list the arguments, and a new constructor parameter needs no change to the registration.
+
+- It fills every required parameter that is not nullable, positional or named.
+- It leaves optional and nullable parameters alone. They get their default value or null.
+- A required parameter whose type is not registered throws `UnregisteredInstance` when the object is first created. A `String`, a number or a callback is never registered.
+
+Write a closure only for those cases: a parameter that is not in the injector, or a setup step such as the auth service's lazy login call in [auth.md](auth.md). For example, `injector.add(() => ReportController(injector.get<ReportApi>(), pageSize: 50))`.
 
 Lookup is by the type you name. Register an object under the type that controllers will ask for, which is usually the interface. Register it a second time under its own type if some code needs the concrete class, as a login controller needs `StoredTokenAuthService` for `signIn`.
 
-Route controllers are not registered. Each binding's `controller` closure builds its controller from the injector when the route is shown.
+**Controllers are registered with `add`**: route controllers, layout controllers and child controllers. The coordinator disposes a controller when its page goes, and a disposed controller cannot be used again, so never register one as a singleton. A binding asks the injector for a new one when its route is shown:
+
+```dart
+// In registerDependencies:
+injector.add(CasesController.new);
+
+// In routes:
+RouteBinding<CasesRoute, CasesController>(
+  path: CasesRoute.path,
+  parse: (_) => const CasesRoute(),
+  controller: (i) => i.get<CasesController>(),
+  page: const CasesPage(),
+),
+```
 
 ## How the coordinator decides what to show
 

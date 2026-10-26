@@ -73,30 +73,14 @@ How a slot behaves:
 
 ## Factories for children
 
-A child usually needs services from the injector. Register one `ControllerFactory` per child type in `registerDependencies`:
+A child usually needs services from the injector. Register the child with `add`, like any controller, and one `ControllerFactory` per child type, in `registerDependencies`:
 
 ```dart
-addControllerFactory<NoteController>(
-  injector,
-  (i) => NoteController(
-    i.get<CaseRepository>(),
-    i.get<AppConfig>(),
-    i.get<ErrorPolicy>(),
-    i.get<NavigationService>(),
-    i.get<Dialogs>(),
-  ),
-);
+injector.add(NoteController.new);
+addControllerFactory<NoteController>(injector, (i) => i.get<NoteController>());
 ```
 
-The parent takes `ControllerFactory<NoteController>` like any service, and calls `create()` for a new child each time:
-
-```dart
-controller: (i) => CaseController(
-  i.get<CaseRepository>(),
-  i.get<NavigationService>(),
-  i.get<ControllerFactory<NoteController>>(),
-),
-```
+The parent takes `ControllerFactory<NoteController>` in its constructor like any service, and calls `create()` for a new child each time. The injector fills that parameter too, so the parent's registration stays `injector.add(CaseController.new)`.
 
 In tests, build the factory by hand: `ControllerFactory(() => SutFactory.createNoteController(provider))`.
 

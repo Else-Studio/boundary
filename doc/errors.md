@@ -45,7 +45,7 @@ void onError(Object error, StackTrace stackTrace) {
 }
 ```
 
-Take the `ErrorPolicy` in the controller's constructor: `i.get<ErrorPolicy>()` in the binding. For a form, pass `onSaveError: _errors.handle` to the `FormSession`.
+Take the `ErrorPolicy` in the controller's constructor. The injector fills it, as it fills every service parameter. For a form, pass `onSaveError: _errors.handle` to the `FormSession`.
 
 **As a page,** for errors that make the page useless. Map them in your error policy's `pageFor`, shown below, or navigate to an `ErrorRoute` yourself.
 

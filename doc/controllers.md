@@ -46,16 +46,13 @@ class CasesController extends Controller<CasesAction> {
 }
 ```
 
-Its binding builds it with its services, and the coordinator calls `enter` once:
+Register it in `registerDependencies` with `injector.add(CasesController.new)`. The injector fills its constructor's parameters by type. Its binding asks for a new one, and the coordinator calls `enter` once:
 
 ```dart
 RouteBinding<CasesRoute, CasesController>(
   path: CasesRoute.path,
   parse: (_) => const CasesRoute(),
-  controller: (i) => CasesController(
-    i.get<CaseRepository>(),
-    i.get<NavigationService>(),
-  ),
+  controller: (i) => i.get<CasesController>(),
   page: const CasesPage(),
   layout: shell,
 ),

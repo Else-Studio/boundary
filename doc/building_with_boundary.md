@@ -65,7 +65,7 @@ Actions run concurrently. A second action starts while a first async one is stil
 
 ### 3. The coordinator creates route controllers
 
-Do not construct a route's controller or call its `enter` yourself, except in tests. The binding's `controller` closure builds it from the injector, and the coordinator calls `enter(route)` once, before the page is built. Start the first load from `enter`, usually by dispatching an action.
+Do not construct a route's controller or call its `enter` yourself, except in tests. The binding's `controller` closure gets a new one from the injector, and the coordinator calls `enter(route)` once, before the page is built. Start the first load from `enter`, usually by dispatching an action.
 
 When the same route type comes back with other params, for example `CaseRoute(1)` to `CaseRoute(2)`, the controller is disposed and a new one is created. If the screen should stay and only reload, implement `RouteUpdatable<R>` and handle `update(route)`.
 
@@ -130,8 +130,8 @@ A new screen touches these places. The guides show each one in full.
 1. **The route class**: a `static const path`, `pathTemplate`, `params` for the path values, and `parent` if back should go somewhere. See [routing.md](routing.md).
 2. **The controller**: its action type, its streams, `enter`, `handleAction`, and `onError` if it wants notices. See [controllers.md](controllers.md).
 3. **The page**: a `StatelessWidget` that reads the controller and dispatches actions. Inside a layout, the page does not build its own `Scaffold`; the layout provides it.
-4. **The binding**: add a `RouteBinding` to your delegate's `routes`, with its `access` and `layout`. Bindings match in list order, so put a fixed path like `/cases/new` before `/cases/:id`.
-5. **Dependencies**: register any new service or API client in `registerDependencies`, and child controller factories with `addControllerFactory`.
+4. **The binding**: add a `RouteBinding` to your delegate's `routes`, with `controller: (i) => i.get<MyController>()`, its `access` and its `layout`. Bindings match in list order, so put a fixed path like `/cases/new` before `/cases/:id`.
+5. **Dependencies**: in `registerDependencies`, register the controller with `injector.add(MyController.new)`, and any new service or API client. Give constructor tear-offs: the injector fills their parameters by type. Register a child controller the same way, plus its factory with `addControllerFactory`. See [architecture.md](architecture.md), "Dependency injection".
 6. **Tests**: add the controller to your `SutFactory`, stub its services in your `MockDependencyProvider`, and test its actions.
 
 Keep a small feature in one file with its route, actions, controller and page. Split a large one into a controller file, a page file, and section widgets.

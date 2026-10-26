@@ -66,11 +66,7 @@ Your delegate's `routes` getter lists one `RouteBinding` per route type:
 RouteBinding<CaseRoute, CaseController>(
   path: CaseRoute.path,
   parse: (params) => CaseRoute(int.parse(params['id']!)),
-  controller: (i) => CaseController(
-    i.get<CaseRepository>(),
-    i.get<NavigationService>(),
-    i.get<ControllerFactory<NoteController>>(),
-  ),
+  controller: (i) => i.get<CaseController>(),
   page: const CasePage(),
   layout: shell,
 ),
@@ -80,7 +76,7 @@ RouteBinding<CaseRoute, CaseController>(
 |---|---|
 | `path` | The route's `static const path`. Give the same constant, not a copy of the string. Showing a route whose `pathTemplate` differs from its binding's `path` throws a `StateError`. |
 | `parse` | Builds the route from a URL's params: the path params, decoded, and the query params, all as strings. A path param wins over a query param of the same name. If `parse` throws, the URL shows "Page not found". |
-| `controller` | Builds the controller from the injector. The coordinator then calls `enter(route)` on it. |
+| `controller` | Gets a new controller from the injector. Register the controller with `injector.add(CaseController.new)`, and the injector fills its constructor's parameters by type. The coordinator then calls `enter(route)` on it. See [architecture.md](architecture.md), "Dependency injection". |
 | `page` | The page widget. It is built under `Provider<C>.value`, so it reads its controller with `context.read<C>()`. |
 | `access` | `public`, `guestOnly` or `protected`. Defaults to `protected`. |
 | `transient` | When true, the route is never remembered as the page to go back to. Use it for pages like a success screen. Defaults to false. |
@@ -178,11 +174,11 @@ How guards run:
 
 ## Layouts
 
-A layout is a frame shared by several pages, such as an app bar with a sign-out button. Declare it once, with its controller and a builder that wraps the page:
+A layout is a frame shared by several pages, such as an app bar with a sign-out button. Declare it once, with its controller and a builder that wraps the page. Register the controller like a route's, with `injector.add(ShellController.new)`:
 
 ```dart
 final shell = LayoutBinding<ShellController>(
-  controller: (i) => ShellController(i.get<AuthService>()),
+  controller: (i) => i.get<ShellController>(),
   builder: (child) => ShellLayout(child: child),
 );
 ```
