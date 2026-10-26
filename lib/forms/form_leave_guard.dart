@@ -9,7 +9,9 @@ class FormLeaveGuard implements LeaveGuard {
     required this.confirm,
   });
 
+  /// The session to flush before leaving.
   final FormSession session;
+  /// Asks the user whether to leave anyway; true leaves.
   final Future<bool> Function() confirm;
 
   @override

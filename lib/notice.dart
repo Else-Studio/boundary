@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+/// How serious a [Notice] is.
 enum NoticeLevel { info, success, warning, error }
 
+/// A short message for the user.
 class Notice {
   const Notice(this.message, {this.level = NoticeLevel.error});
 
@@ -19,6 +21,8 @@ class Notice {
   int get hashCode => Object.hash(message, level);
 }
 
+/// The app's notices. Registered by the coordinator; show them with
+/// [NoticeSnackBarListener].
 class NoticeService {
   final StreamController<Notice> _controller =
       StreamController<Notice>.broadcast(sync: true);
@@ -26,6 +30,7 @@ class NoticeService {
   /// Broadcast; a listener gets only notices shown after it subscribed.
   Stream<Notice> get notices => _controller.stream;
 
+  /// Puts [notice] on [notices].
   void show(Notice notice) => _controller.add(notice);
 
   void dispose() => _controller.close();

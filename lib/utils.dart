@@ -104,22 +104,27 @@ final Talker appLogger = useLogger('----');
 sealed class AsyncResult<T> {
   const AsyncResult();
 
+  /// The data of a [Data], else null.
   T? get dataOrNull => this is Data<T> ? (this as Data<T>).data : null;
 }
 
+/// Nothing to show yet.
 class Empty<T> extends AsyncResult<T> {
   const Empty();
 }
 
+/// Loading is in progress.
 class Loading<T> extends AsyncResult<T> {
   const Loading();
 }
 
+/// Loaded [data].
 class Data<T> extends AsyncResult<T> {
   final T data;
   const Data(this.data);
 }
 
+/// Loading failed with [error].
 class Failure<T> extends AsyncResult<T> {
   final Object error;
   final StackTrace? stackTrace;
@@ -146,8 +151,9 @@ mixin ApiUriBuilder {
   /// The base URL used will be [overrideBaseUrl] if provided, otherwise it
   /// defaults to the client's [apiBaseUrl].
   ///
-  /// Null values in [queryParameters] are automatically filtered out.
-  /// [Iterable] values are correctly expanded into multiple query parameters
+  /// Null values in [queryParameters] are NOT removed: a null becomes the
+  /// string `null`. Remove them before the call.
+  /// [Iterable] values are expanded into multiple query parameters
   /// (e.g., `key=val1&key=val2`). All other values are converted to their
   /// string representation.
   Uri buildApiUri(

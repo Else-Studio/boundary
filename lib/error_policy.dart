@@ -4,6 +4,10 @@ import 'service/base_api_client.dart';
 import 'service/navigation_service.dart';
 import 'utils.dart';
 
+/// Turns an error into a notice, a page, or nothing. A controller opts in by
+/// overriding [Controller.onError] and calling [handle]. Subclass it to
+/// change texts or pages, and return the subclass from
+/// [AppCoordinatorDelegate.createErrorPolicy].
 class ErrorPolicy {
   ErrorPolicy(this.notices, this.navigation);
 

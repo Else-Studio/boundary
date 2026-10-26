@@ -11,6 +11,7 @@ class ControllerHarness<A, C extends Controller<A>> {
 
   final List<StreamSubscription<Object?>> _recordings = [];
 
+  /// The controller under test.
   C get controller => _controller;
 
   /// dispatch(action), then pumpEventQueue().

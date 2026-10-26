@@ -10,14 +10,18 @@ import 'auth_service.dart';
 /// What the app's login call returns.
 class TokenGrant {
   const TokenGrant({required this.token, this.subject});
+  /// The access token sent as a bearer header.
   final String token;
   final String? subject; // becomes AuthSession.subject
 }
 
 /// Keeps one string. The app supplies a secure one (e.g. flutter_secure_storage).
 abstract interface class CredentialStore {
+  /// The stored value, or null.
   Future<String?> read();
+  /// Stores [value], replacing any stored one.
   Future<void> write(String value);
+  /// Removes the stored value.
   Future<void> delete();
 }
 

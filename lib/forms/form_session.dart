@@ -44,6 +44,7 @@ class FormSession implements Disposable {
   bool _followUpQueued = false;
   final List<Completer<bool>> _flushWaiters = [];
 
+  /// The form, for the reactive_forms widgets.
   FormGroup get form => _form;
 
   /// Starts at idle; emits only on change.

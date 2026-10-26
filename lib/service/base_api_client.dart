@@ -17,7 +17,9 @@ import 'http_service.dart';
 
 /// **Base class** for all API-related exceptions.
 class ApiException implements Exception {
+  /// A message for the user.
   final String? message;
+  /// The problem+json body, when the server sent one.
   final HttpProblem? problem;
 
   ApiException(this.message, {this.problem});
@@ -64,6 +66,7 @@ class ResourceNotFoundException extends ApiException {
 
 /// Thrown when the server reports a validation error.
 class InvalidInputException extends ApiException {
+  /// The violations, when the body had them.
   final HttpValidationProblem? validationProblem;
 
   InvalidInputException(String super.message, {this.validationProblem})
@@ -98,6 +101,8 @@ class DataParsingException extends ApiException {
 //      client that communicates over HTTP.
 //    - An app's own client extends this class.
 // ===================================================================
+/// The base class for an app's API clients. Sends requests through
+/// [httpService] and maps every failure to an [ApiException] subclass.
 abstract class BaseApiClient with ApiUriBuilder {
   final HttpService httpService;
   final String baseUrl;

@@ -3,6 +3,10 @@ import 'package:rxdart/rxdart.dart';
 
 import 'utils.dart';
 
+/// Builds a widget for the current [AsyncResult] of [stream]. Starts from a
+/// [ValueStream]'s current value. Defaults: a spinner for [Loading] or no
+/// value yet, "Something went wrong." for [Failure] or a stream error, and
+/// nothing for [Empty].
 class AsyncResultBuilder<T> extends StatelessWidget {
   const AsyncResultBuilder({
     super.key,
@@ -13,10 +17,15 @@ class AsyncResultBuilder<T> extends StatelessWidget {
     this.empty,
   });
 
+  /// The results to show.
   final Stream<AsyncResult<T>> stream;
+  /// Builds the page for [Data].
   final Widget Function(BuildContext context, T data) data;
+  /// Builds [Loading]. Default: a centred spinner.
   final WidgetBuilder? loading;
+  /// Builds [Failure]. Default: "Something went wrong."
   final Widget Function(BuildContext context, Failure<T> failure)? failure;
+  /// Builds [Empty]. Default: nothing.
   final WidgetBuilder? empty;
 
   @override

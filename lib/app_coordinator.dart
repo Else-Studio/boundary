@@ -14,8 +14,14 @@ import 'service/http_service.dart';
 import 'service/navigation_service.dart';
 import 'utils.dart';
 
+/// Runs the app: owns the injector, combines the requested route with the
+/// auth state, decides what to show, and creates and disposes controllers.
+/// Create one in main() with your [AppCoordinatorDelegate].
 class AppCoordinator extends ChangeNotifier {
   final _logger = useLogger('ApCo');
+
+  /// The app's injector. Holds boundary's services and those the delegate
+  /// registers.
   final AutoInjector injector;
   final AppCoordinatorDelegate _delegate;
 
@@ -33,10 +39,16 @@ class AppCoordinator extends ChangeNotifier {
   Future<void> _reconcileTail = Future<void>.value();
   bool _isDisposed = false;
 
+  /// The controller of the shown modal route, or null.
   Controller? get modalController => _modalController;
 
+  /// The shown base route, or null before the first one is shown.
   ConfigurationBase? get baseConfiguration => _baseConfiguration;
+
+  /// The shown modal route, or null.
   ConfigurationBase? get modalConfiguration => _modalConfiguration;
+
+  /// The modal route if one is shown, else the base route.
   ConfigurationBase? get currentTopConfiguration =>
       _modalConfiguration ?? _baseConfiguration;
 
@@ -53,6 +65,10 @@ class AppCoordinator extends ChangeNotifier {
   /// Created once in the constructor, in the order the delegate gives them.
   late final List<RouteGuard> _guards;
 
+  /// Builds the route table, registers boundary's services and then the
+  /// delegate's, commits the injector, creates the guards, and calls
+  /// `authService.initialize()`. Pass [injector] only in tests: a given
+  /// injector is used as it is, and nothing is registered in it.
   AppCoordinator(this._delegate, {AutoInjector? injector})
       : injector = injector ?? AutoInjector() {
     routeTable = RouteTable(_delegate.routes);
@@ -67,12 +83,11 @@ class AppCoordinator extends ChangeNotifier {
   }
   void _setupServicesAndControllers() {
     injector.addSingleton(() => NoticeService());
-    injector.addSingleton(
-        () => NavigationService(
-              delegate: _delegate,
-              routes: routeTable,
-              redirectStore: _delegate.createPostAuthRedirectStore(),
-            ));
+    injector.addSingleton(() => NavigationService(
+          delegate: _delegate,
+          routes: routeTable,
+          redirectStore: _delegate.createPostAuthRedirectStore(),
+        ));
     injector.addSingleton(
       () => _delegate.createErrorPolicy(
         injector.get<NoticeService>(),
@@ -382,6 +397,9 @@ class AppCoordinator extends ChangeNotifier {
     }
   }
 
+  /// The base page in its layout. With no base controller: a loading page
+  /// while auth is unknown, otherwise the error page. Used by
+  /// [CoreRouterDelegate].
   Widget getBaseContentWidget() {
     if (_baseController == null) {
       if (authService.authState.value is AuthUnknown) {
@@ -409,6 +427,8 @@ class AppCoordinator extends ChangeNotifier {
     return layout.wrap(layoutController, page);
   }
 
+  /// The modal page, or null when no modal is shown. Used by
+  /// [CoreRouterDelegate].
   Widget? getModalContentWidget() {
     if (_modalConfiguration == null || _modalController == null) {
       return null;

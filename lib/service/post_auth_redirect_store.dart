@@ -1,9 +1,11 @@
 /// Keeps the route an unauthenticated user asked for, until sign-in is done.
 abstract interface class PostAuthRedirectStore {
+  /// Keeps [uri], replacing any saved one.
   Future<void> save(Uri uri);
 
   /// The saved URI, once; then null until the next save.
   Future<Uri?> take();
+  /// Forgets the saved URI.
   Future<void> clear();
 }
 

@@ -8,8 +8,11 @@ class AuthSession {
   final String? subject;
 }
 
+/// Why there is no session: nothing stored, a 401 ended it, or the user
+/// signed out.
 enum SignedOutReason { noSession, expired, signedOut }
 
+/// [AuthUnknown], [Authenticated] or [SignedOut].
 sealed class AuthState {
   const AuthState();
 }
@@ -45,6 +48,7 @@ final class SignedOut extends AuthState {
   int get hashCode => reason.hashCode;
 }
 
+/// Gives [HttpService] the access token, and hears about every 401.
 abstract interface class AccessTokenProvider {
   /// The current access token, or null when there is none.
   Future<String?> accessToken();
@@ -57,6 +61,8 @@ abstract interface class AccessTokenProvider {
   Future<String?> refreshAfterUnauthorized(String rejectedToken);
 }
 
+/// The auth state and the access token. Register one in
+/// [AppCoordinatorDelegate.registerDependencies]; [HttpService] needs it.
 abstract interface class AuthService implements AccessTokenProvider {
   /// Starts at AuthUnknown.
   ValueStream<AuthState> get authState;
@@ -67,5 +73,6 @@ abstract interface class AuthService implements AccessTokenProvider {
   /// Clears the session locally and ends in SignedOut(signedOut).
   Future<void> signOut();
 
+  /// Closes [authState].
   void dispose();
 }

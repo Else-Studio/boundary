@@ -6,8 +6,11 @@ import 'route_table.dart';
 import 'router.dart';
 import 'service/navigation_service.dart';
 
+/// The action of the default error and not-found pages.
 enum DefaultPageAction { back }
 
+/// The controller of the default error and not-found pages. Back calls
+/// [NavigationService.navigateBackOrLogin].
 class DefaultPageController extends Controller<DefaultPageAction> {
   DefaultPageController(this._navigationService);
 
@@ -86,6 +89,7 @@ class DefaultNotFoundPage extends StatelessWidget {
   }
 }
 
+/// The binding [RouteTable] appends for [ErrorRoute] when the app binds none.
 final RouteBinding<ErrorRoute, DefaultPageController> defaultErrorRouteBinding =
     RouteBinding<ErrorRoute, DefaultPageController>(
   path: ErrorRoute.path,
@@ -98,6 +102,7 @@ final RouteBinding<ErrorRoute, DefaultPageController> defaultErrorRouteBinding =
   access: RouteAccess.public,
 );
 
+/// The binding [RouteTable] appends for [NotFoundRoute] when the app binds none.
 final RouteBinding<NotFoundRoute, DefaultPageController>
     defaultNotFoundRouteBinding =
     RouteBinding<NotFoundRoute, DefaultPageController>(

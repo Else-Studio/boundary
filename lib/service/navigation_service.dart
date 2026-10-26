@@ -26,8 +26,11 @@ class NavigationService {
   final List<LeaveGuard> _leaveGuards = [];
   bool _leaveCheckRunning = false;
 
+  /// The routes requested, before access rules and guards. The coordinator
+  /// listens to it.
   ValueStream<ConfigurationBase?> get routeRequestStream =>
       _routeRequest$.stream;
+  /// The last route requested, or null.
   ConfigurationBase? get currentRequestedConfiguration =>
       _routeRequest$.valueOrNull;
 
@@ -67,6 +70,7 @@ class NavigationService {
     return _LeaveGuardRegistration(() => _leaveGuards.remove(guard));
   }
 
+  /// Whether any leave guard is registered.
   bool get hasLeaveGuards => _leaveGuards.isNotEmpty;
 
   /// Any registered guard has unsaved changes.
@@ -108,6 +112,8 @@ class NavigationService {
     _logger.info('Cleared post-authentication redirect intent.');
   }
 
+  /// Requests [configuration]. Leave guards run first, unless a modal opens
+  /// over a page or the route is already shown.
   void navigateTo(ConfigurationBase configuration) {
     _logger.debug(
       "Request received to navigate to: ${configuration.runtimeType}",
@@ -115,6 +121,8 @@ class NavigationService {
     _requestGuarded(configuration);
   }
 
+  /// For the router: a URL from the platform, such as a deep link. Leave
+  /// guards do not run.
   void routerSetNewPath(ConfigurationBase configuration) {
     _logger.debug(
       "Platform requested navigation path: ${configuration.runtimeType}",
@@ -145,6 +153,8 @@ class NavigationService {
     _navigateToLastBaseOr(_delegate.getLoginRoute());
   }
 
+  /// Closes the modal: requests the last base route, or the post-login route
+  /// when there is none. Leave guards run first.
   void dismissModal() {
     _logger.debug("Request received to dismiss modal.");
 

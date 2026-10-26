@@ -21,8 +21,10 @@ class ControllerSlot<K, C extends Controller> {
   /// Synchronous: a listener runs inside [activate]/[clear]. Starts at null.
   ValueStream<C?> get stream => _stream;
 
+  /// The current child, or null.
   C? get current => _current;
 
+  /// The current child's key, or null.
   K? get key => _key;
 
   /// Same key as the current child: returns it and emits nothing.

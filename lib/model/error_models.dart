@@ -14,6 +14,8 @@ void initializeCoreMappers() {
   discriminatorKey: 'type',
   hook: UnmappedPropertiesHook('extensions'),
 )
+/// A problem+json error body (RFC 9457). [BaseApiClient] decodes it into
+/// the `problem` of the exception it throws.
 class HttpProblem with HttpProblemMappable {
   final String? type;
   final String? title;
@@ -36,6 +38,8 @@ class HttpProblem with HttpProblemMappable {
   });
 }
 
+/// One failed check in an [HttpValidationProblem]: the [field] it is about
+/// and a [message].
 @MappableClass()
 class Violation with ViolationMappable {
   final String? field;
@@ -49,6 +53,8 @@ class Violation with ViolationMappable {
   });
 }
 
+/// A problem with [violations]. [FormSession.applyViolations] puts them on
+/// form fields.
 @MappableClass(discriminatorValue: MappableClass.useAsDefault)
 class HttpValidationProblem extends HttpProblem
     with HttpValidationProblemMappable {

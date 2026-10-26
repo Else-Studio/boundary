@@ -14,6 +14,7 @@ class ControllerSlotBuilder<C extends Controller> extends StatelessWidget {
     this.empty,
   });
 
+  /// The slot's stream, from [ControllerSlot.stream].
   final ValueStream<C?> stream;
 
   /// Built under `Provider<C>.value` and `KeyedSubtree(key: ObjectKey(c))`.

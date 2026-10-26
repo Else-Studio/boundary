@@ -13,8 +13,10 @@ import 'utils.dart';
 /// Each configuration represents a specific destination or state that can be
 /// navigated to, and is responsible for generating its corresponding [Uri].
 abstract class ConfigurationBase {
+  /// A root route (`/`) is replaced by the post-login route when signed in.
   final bool isRoot;
 
+  /// A modal route is shown over the current base page.
   final bool isModal;
 
   /// Creates a base configuration.
@@ -60,6 +62,7 @@ abstract class ConfigurationBase {
 /// This is a framework-level concept, not tied to application business logic.
 class NotFoundRoute extends ConfigurationBase {
   static const String path = '/404';
+  /// The URL that matched no route.
   final String originalUrl;
 
   const NotFoundRoute(this.originalUrl);
@@ -82,8 +85,11 @@ class NotFoundRoute extends ConfigurationBase {
 /// This is a framework-level concept for representing failure states.
 class ErrorRoute extends ConfigurationBase {
   static const String path = '/error';
+  /// The sentence the error page shows.
   final String message;
+  /// Details for logs and custom error pages.
   final HttpProblem? problem;
+  /// True when the auth state could not be checked.
   final bool isSessionTermination;
 
   const ErrorRoute({

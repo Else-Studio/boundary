@@ -20,10 +20,12 @@ sealed class GuardResult {
   const factory GuardResult.redirect(ConfigurationBase route) = GuardRedirect;
 }
 
+/// The route may be shown.
 final class GuardAllow extends GuardResult {
   const GuardAllow() : super._();
 }
 
+/// Show [route] instead.
 final class GuardRedirect extends GuardResult {
   const GuardRedirect(this.route) : super._();
 
@@ -33,6 +35,8 @@ final class GuardRedirect extends GuardResult {
 /// App policy (roles, data policy, ...). Gets its services from its own
 /// constructor; it is not given the auth state.
 abstract interface class RouteGuard {
+  /// Allows [route], or redirects to another route. Runs for every route about
+  /// to be shown, after the access step. A throw shows an [ErrorRoute].
   FutureOr<GuardResult> check(ConfigurationBase route);
 }
 
@@ -81,6 +85,7 @@ class RouteBinding<R extends ConfigurationBase, C extends Controller> {
   /// The view, which reads its controller from Provider.
   final Widget page;
 
+  /// Who may see the route. Default: [RouteAccess.protected].
   final RouteAccess access;
 
   /// Never kept as the "last base" in NavigationService.

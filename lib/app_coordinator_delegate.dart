@@ -43,6 +43,8 @@ abstract class AppCoordinatorDelegate extends NavigationServiceDelegate {
   PostAuthRedirectStore createPostAuthRedirectStore() =>
       InMemoryPostAuthRedirectStore();
 
+  /// The [ErrorPolicy] the coordinator registers. Override to return a
+  /// subclass with your own texts or pages.
   ErrorPolicy createErrorPolicy(
     NoticeService notices,
     NavigationService navigation,
