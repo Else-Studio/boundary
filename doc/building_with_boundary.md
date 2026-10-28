@@ -34,7 +34,7 @@ These rules keep logic testable and screens predictable. Follow them unless a gu
 
 A view reads its controller with `context.read<C>()`, listens to the controller's streams, and calls `controller.dispatch(action)` for every user intent. It does not compute, filter or decide. It does not build API request objects. It never writes a controller field or changes a form array by hand.
 
-If a view needs a derived value, such as "can save" or a sorted list, the controller computes it and puts it on a stream.
+If a view needs a derived value, such as "can save" or a sorted list, the controller computes it and puts it on a stream. [views.md](views.md) covers splitting a page into widgets, lists, dialogs and styling.
 
 ### 2. Every intent is an action
 
@@ -151,7 +151,9 @@ Keep a small feature in one file with its route, actions, controller and page. S
 | Call the API and map its errors | [api_client.md](api_client.md) |
 | Show an error inline, as a notice, or as a page | [errors.md](errors.md) |
 | Give part of a page its own controller, or switch a detail pane by id | [sub_controllers.md](sub_controllers.md) |
+| Split a page into widgets, show a list, open a dialog, style a view | [views.md](views.md) |
 | Build an auto-saving form, or warn before leaving | [forms.md](forms.md) |
+| Keep a form's list of rows in step with the server | [forms.md](forms.md), "Lists of rows" |
 | Test a controller or an API client | [testing.md](testing.md) |
 
 ## Entry libraries

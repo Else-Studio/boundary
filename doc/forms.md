@@ -137,6 +137,19 @@ Setting a value in code, such as `control.value = 'x'`, leaves the control prist
 
 Use it for the first load, and whenever newer server data arrives, for example after another device saved.
 
+## Lists of rows
+
+`patchFromServer` treats a `FormArray` as one value. A user edit in any row marks the whole array dirty, so the array is skipped until it is saved. Otherwise the list is written by position: it does not remove rows the server no longer has, and a new row becomes a plain `FormControl`, not a row of the right shape.
+
+So for a list of rows, such as a case's contacts, leave the array out of the value you give `patchFromServer` and update the array in place yourself:
+
+- Match rows by id. Write the server's values into a pristine row and mark it pristine. Leave a row the user is editing alone.
+- A row the user added has no id yet. When the server's copy of it arrives, write the id into that row instead of adding another.
+- Add a row only for a server row nothing matched.
+- Remove a row only when it has an id and the server no longer has it.
+
+Do not clear the array and add every row again. That resets each field's cursor, focus and scroll position, and it loses an edit in progress. In the view, key each row by its id: see [views.md](views.md), "Lists of rows".
+
 ## Server validation errors
 
 When `save` throws an `InvalidInputException` whose problem has violations, the session sets each violation on its control before it reports the error. The error key is `server` and its value is the violation's message. The control is marked touched, so the message shows at once. Show it with the field's `validationMessages`:

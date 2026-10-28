@@ -33,6 +33,6 @@ Boundary is a Flutter framework for apps whose screens are driven by controllers
 
 - [GETTING_STARTED.md](GETTING_STARTED.md) builds a small app step by step.
 - [doc/building_with_boundary.md](doc/building_with_boundary.md) is the rule book for every feature, and the page to point your app's agents at.
-- [doc/](doc/) holds a guide per topic: [architecture](doc/architecture.md), [controllers](doc/controllers.md), [routing](doc/routing.md), [child controllers](doc/sub_controllers.md), [forms](doc/forms.md), [errors](doc/errors.md), [auth](doc/auth.md), [API clients](doc/api_client.md) and [testing](doc/testing.md).
+- [doc/](doc/) holds a guide per topic: [architecture](doc/architecture.md), [controllers](doc/controllers.md), [routing](doc/routing.md), [child controllers](doc/sub_controllers.md), [views](doc/views.md), [forms](doc/forms.md), [errors](doc/errors.md), [auth](doc/auth.md), [API clients](doc/api_client.md) and [testing](doc/testing.md).
 - [CHANGELOG.md](CHANGELOG.md) lists what changed in each version.
 - [AGENTS.md](AGENTS.md) is for anyone changing boundary itself.

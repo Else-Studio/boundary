@@ -41,6 +41,7 @@ The guides in `doc/` describe the intended behaviour, and the tests lock it in. 
 | API clients and exceptions | [doc/api_client.md](doc/api_client.md) | `service/base_api_client.dart` |
 | Error policy and notices | [doc/errors.md](doc/errors.md) | `error_policy.dart`, `notice.dart` |
 | Forms | [doc/forms.md](doc/forms.md) | `forms/form_session.dart`, `forms/form_leave_guard.dart` |
+| Where a page's controller is provided, `AsyncResultBuilder` | [doc/views.md](doc/views.md) | `route_table.dart`, `async_result_builder.dart` |
 
 A few behaviours are easy to break by accident:
 

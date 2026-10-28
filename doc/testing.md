@@ -230,6 +230,7 @@ void main() {
 - Drive the controller only as the app does: `enter`, `update`, and actions. Do not call its private helpers, and do not add public methods just for tests.
 - Assert on its streams, on `provider.navigation.requests`, on notices, and on calls to your mocks with `verify`.
 - A test of `RouteUpdatable` calls `enter` with one route, then `update` with another.
+- A test of a filter or a search gives it at least one item that matches and one that does not. If every item matches, a filter that returns everything still passes.
 
 ## Waiting for async work
 
