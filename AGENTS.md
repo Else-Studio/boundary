@@ -4,7 +4,7 @@ This file is for changing boundary itself. To build an app on boundary, read [do
 
 ## Toolchain
 
-- Flutter 3.47.7 (Dart 3.13.5) is pinned in `mise.toml`. Run `flutter` and `dart` from inside `boundary/`, so mise picks that version.
+- Flutter 3.47.8 (Dart 3.13.7) is pinned in the repository's root `mise.toml`. Run `flutter` and `dart` from inside `boundary/`, so mise picks that version.
 - `flutter analyze` must print `No issues found!`. Infos count: the command exits non-zero on them. Do not add `// ignore:` or `// ignore_for_file:` in `lib/`.
 - `flutter test --reporter failures-only` runs the suite. The last line is `+N: All tests passed!`, with `~N` for skipped tests. `No tests match` or `No tests ran.` is never a pass.
 - Run one file with `flutter test --reporter failures-only test/<path>_test.dart`, and narrow it with `--plain-name "<part of a test name>"`.
