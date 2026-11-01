@@ -180,9 +180,9 @@ expect(auth.authState.value, isA<Authenticated>());
 
 ### RecordingNavigationService
 
-`RecordingNavigationService(loginRoute: ..., homeRoute: ...)` is a real `NavigationService`, so leave guards and `navigateUp` behave as in the app. `requests` lists every route it was asked to show, in order. Leave out `routes` unless the test needs a binding's `transient` flag.
+`RecordingNavigationService(loginRoute: ..., homeRoute: ...)` is a real `NavigationService`, so leave guards, `navigateUp` and `navigateBack` behave as in the app. `requests` lists every route it was asked to show, in order. Leave out `routes` unless the test needs a binding's `transient` flag.
 
-Nothing is shown in a test until you say so. Call `show(route)`, or `show(base, modal: route)`, before testing anything that depends on what is shown, such as `navigateUp`.
+Nothing is shown in a test until you say so. Call `show(route)`, or `show(base, modal: route)`, before testing anything that depends on what is shown, such as `navigateUp` or `navigateBack`.
 
 ```dart
 test('opening a case navigates to it', () async {

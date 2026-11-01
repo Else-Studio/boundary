@@ -71,7 +71,7 @@ When the same route type comes back with other params, for example `CaseRoute(1)
 
 ### 4. Navigate with route objects
 
-Use `NavigationService`: `navigateTo(route)`, `navigateUp()`, `dismissModal()`. Do not use `Navigator.push` or URL strings. `Navigator.pop` is only for closing a dialog you opened with `showDialog`.
+Use `NavigationService`: `navigateTo(route)`, `navigateUp()`, `navigateBack()`, `dismissModal()`. Do not use `Navigator.push` or URL strings. `Navigator.pop` is only for closing a dialog you opened with `showDialog`.
 
 Do not navigate after signing in or out. The coordinator watches the auth state. After sign-in it leaves the login route by itself, and after sign-out it shows the login route.
 

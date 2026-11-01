@@ -23,6 +23,13 @@ class NavigationService {
   final _modalRoute$ = BehaviorSubject<ConfigurationBase?>.seeded(null);
   ConfigurationBase? _lastBaseConfiguration;
 
+  /// The base routes shown, oldest first. See [navigateBack].
+  final List<ConfigurationBase> _history = [];
+
+  /// Whether the last emitted request is the parent that [navigateBack] asked
+  /// for as its fallback. That parent replaces the current history entry.
+  bool _lastRequestReplaces = false;
+
   final List<LeaveGuard> _leaveGuards = [];
   bool _leaveCheckRunning = false;
 
@@ -30,6 +37,7 @@ class NavigationService {
   /// listens to it.
   ValueStream<ConfigurationBase?> get routeRequestStream =>
       _routeRequest$.stream;
+
   /// The last route requested, or null.
   ConfigurationBase? get currentRequestedConfiguration =>
       _routeRequest$.valueOrNull;
@@ -46,6 +54,7 @@ class NavigationService {
     required ConfigurationBase? base,
     required ConfigurationBase? modal,
   }) {
+    _recordShown(base);
     if (_baseRoute$.value != base) _baseRoute$.add(base);
     if (_modalRoute$.value != modal) _modalRoute$.add(modal);
   }
@@ -182,7 +191,55 @@ class NavigationService {
   /// Dismisses a shown modal; else shows the previous base route and drops the
   /// current one; else does what [navigateUp] does. True when it requested anything.
   bool navigateBack() {
-    throw UnimplementedError('not implemented');
+    if (_modalRoute$.value != null) {
+      dismissModal();
+      return true;
+    }
+    final shown = _baseRoute$.value;
+    final previous = _history.isNotEmpty && shown == _history.last
+        ? (_history.length >= 2 ? _history[_history.length - 2] : null)
+        : _history.lastOrNull;
+    if (previous != null) {
+      _logger.debug(
+        "Request received to navigate back to: ${previous.runtimeType}",
+      );
+      _requestGuarded(previous);
+      return true;
+    }
+    final parent = shown?.parent;
+    if (parent == null) return false;
+    _logger.debug(
+      "No previous route. Navigating back to the parent: ${parent.runtimeType}",
+    );
+    _requestGuarded(parent, replace: true);
+    return true;
+  }
+
+  /// Updates the history for the shown base route [base].
+  void _recordShown(ConfigurationBase? base) {
+    if (base == null || _routes.isTransient(base)) return;
+    if (base == _delegate.getLoginRoute()) {
+      _history
+        ..clear()
+        ..add(base);
+      return;
+    }
+    if (_history.isNotEmpty && _history.last == base) return;
+    if (_history.length >= 2 && _history[_history.length - 2] == base) {
+      _history.removeLast();
+      return;
+    }
+    final request = _routeRequest$.valueOrNull;
+    final replacesLast = request != null &&
+        !request.isModal &&
+        request is! ErrorRoute &&
+        !_routes.isTransient(request) &&
+        (request != base || _lastRequestReplaces);
+    if (replacesLast && _history.isNotEmpty) {
+      _history[_history.length - 1] = base;
+    } else {
+      _history.add(base);
+    }
   }
 
   void _navigateToLastBaseOr(ConfigurationBase fallback) {
@@ -201,7 +258,7 @@ class NavigationService {
     }
   }
 
-  void _requestGuarded(ConfigurationBase target) {
+  void _requestGuarded(ConfigurationBase target, {bool replace = false}) {
     if (_leaveCheckRunning) {
       _logger.debug(
         'Dropping navigation request while a leave check is running: ${target.runtimeType}',
@@ -213,15 +270,18 @@ class NavigationService {
     final openingModalOverPage =
         target.isModal && _modalRoute$.value == null;
     if (_leaveGuards.isEmpty || target == shown || openingModalOverPage) {
-      _emitRequest(target);
+      _emitRequest(target, replace: replace);
       return;
     }
 
     _leaveCheckRunning = true;
-    _runLeaveGuardsThen(target);
+    _runLeaveGuardsThen(target, replace: replace);
   }
 
-  Future<void> _runLeaveGuardsThen(ConfigurationBase target) async {
+  Future<void> _runLeaveGuardsThen(
+    ConfigurationBase target, {
+    required bool replace,
+  }) async {
     try {
       for (final guard in List<LeaveGuard>.of(_leaveGuards)) {
         try {
@@ -241,13 +301,13 @@ class NavigationService {
           return;
         }
       }
-      _emitRequest(target);
+      _emitRequest(target, replace: replace);
     } finally {
       _leaveCheckRunning = false;
     }
   }
 
-  void _emitRequest(ConfigurationBase configuration) {
+  void _emitRequest(ConfigurationBase configuration, {bool replace = false}) {
     _logger.verbose(
       'Processing request for route: ${configuration.runtimeType}',
     );
@@ -265,12 +325,14 @@ class NavigationService {
       }
     }
     _logger.info('Emitting route request: ${configuration.runtimeType}');
+    _lastRequestReplaces = replace;
     _routeRequest$.add(configuration);
   }
 
   void dispose() {
     _logger.info('Disposing NavigationService.');
     _unloadWarning.dispose();
+    _history.clear();
     _routeRequest$.close();
     _baseRoute$.close();
     _modalRoute$.close();

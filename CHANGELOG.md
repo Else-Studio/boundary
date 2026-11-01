@@ -47,7 +47,7 @@ Boundary becomes a generic framework. This release breaks most of the 0.4 API. W
 *   `RouteTable` appends `defaultErrorRouteBinding` and `defaultNotFoundRouteBinding` for the `ErrorRoute` and `NotFoundRoute` an app does not bind. Both are `public`. `DefaultPageController`, `DefaultErrorPage` and `DefaultNotFoundPage` are exported from `boundary.dart`, with English texts.
 *   `RouteAccess` (`public`, `guestOnly`, `protected`) is new; `RouteBinding.access` sets it, and defaults to `protected`.
 *   The coordinator applies one access table: when signed out, a `public` route is now shown, as is a `guestOnly` route, and only `protected` routes go to login; a signed-in user on a `guestOnly` route goes to `getPostLoginDefaultRoute()`.
-*   `RouteBinding.transient` keeps a route out of the "last base" in `NavigationService`; `RouteTable.isTransient(route)` reads it (false for a route with no binding).
+*   `RouteBinding.transient` keeps a route out of the "last base" and out of the back history in `NavigationService`; `RouteTable.isTransient(route)` reads it (false for a route with no binding).
 *   `GuardResult` (`allow`, `redirect`), `RouteGuard` and `AppCoordinatorDelegate.createGuards(injector)` are new: guards run in order, and the first redirect restarts resolution at the access step.
 *   `ErrorRoute.message` from the coordinator is an English sentence: "The session could not be checked." (auth stream error), "A page check failed." (a guard throws), "Opening that page kept redirecting." (more than 5 guard redirects) and "The app could not decide which page to show." (no base controller).
 *   `LayoutBinding(controller, builder)` is new: a layout around pages with its own controller, provided with `Provider<C>.value`.
@@ -55,7 +55,8 @@ Boundary becomes a generic framework. This release breaks most of the 0.4 API. W
 *   `AppCoordinator.layoutController` is the current base route's layout controller, or null.
 *   `ConfigurationBase.parent` is new: where back goes from a route; null for a top route.
 *   `NavigationService.navigateUp()` dismisses a shown modal, or else goes to the shown base route's parent; it returns false and requests nothing when there is neither.
-*   `CoreRouterDelegate.popRoute()` (system back) pops a shown modal, or else calls `navigateUp()`; the app exits only when the route has no parent. With leave guards registered, a modal's system back also goes through `navigateUp()`.
+*   `NavigationService.navigateBack()` is new. `NavigationService` keeps the list of base routes shown. `navigateBack()` dismisses a shown modal, or else shows the previous base route and drops the current one, or else goes to the parent as `navigateUp()` does; it returns false and requests nothing when there is none. Leave guards run first.
+*   `CoreRouterDelegate.popRoute()` (system back) pops a shown modal, or else calls `navigateBack()`; the app exits only when there is no previous route and the route has no parent. With leave guards registered, a modal's system back also goes through `navigateBack()`.
 *   `NavigationService.baseRouteStream` and `modalRouteStream` stream the resolved routes, after redirects.
 *   `NavigationService.onRouteResolved` is called by `AppCoordinator` each time what it shows changes.
 *   `LeaveGuard` lets a page veto or confirm leaving through `mayLeave` and report `hasUnsavedChanges`.

@@ -253,7 +253,7 @@ class CoreRouterDelegate extends RouterDelegate<ConfigurationBase>
 
   /// System back. A modal shown and no leave guards: pops it as the mixin
   /// does, and `onDidRemovePage` dismisses it. Otherwise asks
-  /// [NavigationService.navigateUp]; false leaves the app (the platform decides).
+  /// [NavigationService.navigateBack]; false leaves the app (the platform decides).
   @override
   Future<bool> popRoute() {
     final navigation = appCoordinator.navigationService;
@@ -261,7 +261,7 @@ class CoreRouterDelegate extends RouterDelegate<ConfigurationBase>
         !navigation.hasLeaveGuards) {
       return super.popRoute();
     }
-    return SynchronousFuture(navigation.navigateUp());
+    return SynchronousFuture(navigation.navigateBack());
   }
 
   @override

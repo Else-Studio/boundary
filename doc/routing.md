@@ -111,6 +111,7 @@ Controllers inject `NavigationService` and call it from `handleAction`:
 |---|---|
 | `navigateTo(route)` | Requests `route`. Leave guards run first. |
 | `navigateUp()` | Closes a shown modal, or else goes to the shown page's `parent`. Returns false and does nothing when there is neither. |
+| `navigateBack()` | Closes a shown modal, or else shows the previous base page, or else goes to the shown page's `parent`. Returns false and does nothing when there is none of these. See "Back". |
 | `dismissModal()` | Closes the modal: goes back to the last base page, or to the post-login route if there is none. |
 | `navigateBackOrLogin()` | Goes to the last base page, or to login if there is none. |
 
@@ -248,13 +249,24 @@ A dialog that only asks a question, such as "Discard changes?", does not need a 
 
 ## Back
 
-Boundary keeps no history stack. Back goes up, to the route's `parent`, not to the previous page.
+`NavigationService` keeps the list of base routes the app has shown. `navigateBack()` goes to the previous one and drops the current one. With no previous route, it goes to the shown route's `parent`, as `navigateUp()` does. The parent then replaces the current entry in the list, so repeated Back reaches a top route instead of going between a page and its parent. A route with no previous route and no parent has nowhere to go, and `navigateBack()` returns false.
 
-- `navigateUp()` closes a shown modal. Otherwise it goes to the shown base route's `parent`. A route with no parent is a top route, and `navigateUp()` returns false.
-- System back, such as the Android back button, does the same. On a top route it leaves the app.
+- `navigateBack()` closes a shown modal first. The list stays as it was.
+- System back, such as the Android back button, calls `navigateBack()`. At the start of the list, on a top route, it leaves the app.
+- `navigateUp()` is the way to go to the parent. It closes a shown modal, or else goes to the shown base route's `parent`, and returns false when there is neither.
 - `parent` is a getter, so it can use the route's params. For example, `NoteRoute(caseId, noteId).parent` can return `CaseRoute(caseId)`.
 
-A back arrow on a page dispatches an action, and the controller calls `navigateUp()`.
+The list is built from the routes the coordinator shows:
+
+- A transient route is not recorded.
+- Showing the login route starts the list again with only that route. This is how sign-out clears it.
+- Showing the route that is already the last entry changes nothing, so a modal opening or closing keeps the list.
+- Showing the entry before the last one drops the last entry. This is what Back does, and it keeps A, B, A, B at two entries.
+- When the coordinator shows a different route than the one requested, for example after a redirect, the shown route replaces the last entry.
+- Any other shown route is added. This includes a deep link.
+- A vetoed Back changes nothing.
+
+A back arrow on a page dispatches an action, and the controller calls `navigateBack()`, or `navigateUp()` to go to the parent.
 
 ## Leave guards
 
@@ -268,7 +280,7 @@ own(navigation.addLeaveGuard(
 
 `mayLeave()` returns true to let the navigation go ahead. `hasUnsavedChanges` drives the browser's "leave site?" warning on the web.
 
-Leave guards run before `navigateTo`, `navigateUp`, `dismissModal`, `navigateBackOrLogin`, and system back. They do not run when:
+Leave guards run before `navigateTo`, `navigateUp`, `navigateBack`, `dismissModal`, `navigateBackOrLogin`, and system back. They do not run when:
 
 - a modal opens over a page;
 - the target is the route already shown;
