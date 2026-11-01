@@ -179,6 +179,12 @@ class NavigationService {
     return true;
   }
 
+  /// Dismisses a shown modal; else shows the previous base route and drops the
+  /// current one; else does what [navigateUp] does. True when it requested anything.
+  bool navigateBack() {
+    throw UnimplementedError('not implemented');
+  }
+
   void _navigateToLastBaseOr(ConfigurationBase fallback) {
     // Only navigate back to the previous base if it is known. Transient
     // routes are never kept as the last base.

@@ -5,9 +5,9 @@
 //   - test: system back without a modal does not dismiss anything
 //   - test: system back on a modal built as a plain page does not dismiss
 //   - test: the coordinator closing a modal does not dismiss it again
-//   - test: system back on a base page asks NavigationService to go up
+//   - test: system back on a base page asks NavigationService to go back
 //   - test: system back at a top route leaves the app
-//   - test: system back on a modal pops it and does not go up
+//   - test: system back on a modal pops it and does not go up or back
 //
 // group: 'CoreRouterDelegate empty frame'
 //   - test: an empty router shows the coordinator loading scaffold
@@ -172,7 +172,7 @@ void main() {
 
     testWidgets('system back without a modal does not dismiss anything',
         (tester) async {
-      when(provider.mockNavigationService.navigateUp()).thenReturn(false);
+      when(provider.mockNavigationService.navigateBack()).thenReturn(false);
       await emit(tester, FakeBaseRoute());
       await pumpRouter(tester);
 
@@ -215,9 +215,9 @@ void main() {
       verifyNever(provider.mockNavigationService.dismissModal());
     });
 
-    testWidgets('system back on a base page asks NavigationService to go up',
+    testWidgets('system back on a base page asks NavigationService to go back',
         (tester) async {
-      when(provider.mockNavigationService.navigateUp()).thenReturn(true);
+      when(provider.mockNavigationService.navigateBack()).thenReturn(true);
       await emit(tester, FakeCaseDetailRoute());
       await pumpRouter(tester);
 
@@ -225,12 +225,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(handled, isTrue);
-      verify(provider.mockNavigationService.navigateUp()).called(1);
+      verify(provider.mockNavigationService.navigateBack()).called(1);
+      verifyNever(provider.mockNavigationService.navigateUp());
       verifyNever(provider.mockNavigationService.dismissModal());
     });
 
     testWidgets('system back at a top route leaves the app', (tester) async {
-      when(provider.mockNavigationService.navigateUp()).thenReturn(false);
+      when(provider.mockNavigationService.navigateBack()).thenReturn(false);
       await emit(tester, FakeCasesRoute());
       await pumpRouter(tester);
 
@@ -253,13 +254,14 @@ void main() {
       expect(handled, isTrue);
       verify(provider.mockNavigationService.dismissModal()).called(1);
       verifyNever(provider.mockNavigationService.navigateUp());
+      verifyNever(provider.mockNavigationService.navigateBack());
     });
 
     testWidgets(
         'system back with a guarded modal goes through NavigationService',
         (tester) async {
       when(provider.mockNavigationService.hasLeaveGuards).thenReturn(true);
-      when(provider.mockNavigationService.navigateUp()).thenReturn(true);
+      when(provider.mockNavigationService.navigateBack()).thenReturn(true);
       await emit(tester, FakeCaseDetailRoute());
       await emit(tester, FakeNoteModalRoute());
       await pumpRouter(tester);
@@ -269,7 +271,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(handled, isTrue);
-      verify(provider.mockNavigationService.navigateUp()).called(1);
+      verify(provider.mockNavigationService.navigateBack()).called(1);
       verifyNever(provider.mockNavigationService.dismissModal());
       expect(coordinator.modalConfiguration, isA<FakeNoteModalRoute>());
     });

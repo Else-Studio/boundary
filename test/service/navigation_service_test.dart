@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:boundary/boundary.dart';
+import 'package:boundary/testing.dart' hide pumpEventQueue;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/sut_factory.dart';
 
 class TestGuard implements LeaveGuard {
   TestGuard({Completer<bool>? answer, bool? fixed, this.unsaved = false})
@@ -505,6 +508,187 @@ void main() {
 
       expect(service.navigateUp(), isTrue);
       expect(service.currentRequestedConfiguration, const _CasesRoute());
+    });
+  });
+
+  group('navigateBack', () {
+    late RecordingNavigationService service;
+
+    setUp(() {
+      service = SutFactory.createRecordingNavigationService(
+        loginRoute: const _GuestRoute(),
+        homeRoute: const _TestRoute('/home'),
+        routes: [
+          _bind<_TestCallbackRoute>(
+            '/callback',
+            (_) => const _TestCallbackRoute(),
+            access: RouteAccess.public,
+            transient: true,
+          ),
+        ],
+      );
+    });
+
+    tearDown(() => service.dispose());
+
+    void showRoute(ConfigurationBase route) {
+      service.navigateTo(route);
+      service.show(route);
+    }
+
+    Future<ConfigurationBase?> lastRequest() async {
+      await pumpEventQueue();
+      return service.requests.isEmpty ? null : service.requests.last;
+    }
+
+    Future<int> requestCount() async {
+      await pumpEventQueue();
+      return service.requests.length;
+    }
+
+    test('walks back one shown route at a time and stops at the first',
+        () async {
+      showRoute(const _RouteA());
+      showRoute(const _RouteB());
+      showRoute(const _CasesRoute());
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _RouteB());
+      service.show(const _RouteB());
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _RouteA());
+      service.show(const _RouteA());
+
+      final before = await requestCount();
+      expect(service.navigateBack(), isFalse);
+      expect(await requestCount(), before);
+    });
+
+    test('a deep link with no previous route goes back to its parent',
+        () async {
+      service.routerSetNewPath(const _SessionNoteRoute('c1', 's1'));
+      service.show(const _SessionNoteRoute('c1', 's1'));
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _CaseDetailRoute('c1'));
+    });
+
+    test('the parent shown by the fallback replaces the current entry',
+        () async {
+      service.routerSetNewPath(const _SessionNoteRoute('c1', 's1'));
+      service.show(const _SessionNoteRoute('c1', 's1'));
+      service.navigateBack();
+      service.show(const _CaseDetailRoute('c1'));
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _CasesRoute());
+      service.show(const _CasesRoute());
+
+      final before = await requestCount();
+      expect(service.navigateBack(), isFalse);
+      expect(await requestCount(), before);
+    });
+
+    test('a shown modal is dismissed and the history stays as it was',
+        () async {
+      showRoute(const _CasesRoute());
+      showRoute(const _CaseDetailRoute('c1'));
+      service.navigateTo(const _CaseNoteModalRoute());
+      service.show(const _CaseDetailRoute('c1'),
+          modal: const _CaseNoteModalRoute());
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _CaseDetailRoute('c1'));
+      service.show(const _CaseDetailRoute('c1'));
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _CasesRoute());
+    });
+
+    test('showing A, B, A, B again keeps only two entries', () async {
+      showRoute(const _RouteA());
+      showRoute(const _RouteB());
+      showRoute(const _RouteA());
+      showRoute(const _RouteB());
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _RouteA());
+      service.show(const _RouteA());
+
+      final before = await requestCount();
+      expect(service.navigateBack(), isFalse);
+      expect(await requestCount(), before);
+    });
+
+    test('a redirect replaces the requested entry instead of adding one',
+        () async {
+      showRoute(const _RouteA());
+      service.navigateTo(const _RouteB());
+      service.show(const _CasesRoute());
+
+      expect(service.navigateBack(), isFalse);
+      expect(await lastRequest(), const _RouteB());
+    });
+
+    test('a redirect on the first route shown is added to an empty history',
+        () async {
+      service.navigateTo(const _RouteA());
+      service.show(const _RouteB());
+      showRoute(const _CasesRoute());
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _RouteB());
+    });
+
+    test('a vetoed back keeps the history', () async {
+      showRoute(const _RouteA());
+      showRoute(const _RouteB());
+      final registration = service.addLeaveGuard(TestGuard(fixed: false));
+
+      expect(service.navigateBack(), isTrue);
+      await pumpEventQueue();
+      expect(await lastRequest(), const _RouteB());
+
+      registration.dispose();
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _RouteA());
+    });
+
+    test('showing the login route starts the history again', () async {
+      showRoute(const _RouteA());
+      showRoute(const _RouteB());
+      service.redirectTo(const _GuestRoute());
+      service.show(const _GuestRoute());
+
+      expect(service.navigateBack(), isFalse);
+      expect(await lastRequest(), const _GuestRoute());
+    });
+
+    test('after sign-in the login route is not a previous route', () async {
+      showRoute(const _RouteA());
+      showRoute(const _RouteB());
+      service.redirectTo(const _GuestRoute());
+      service.show(const _GuestRoute());
+      final before = await requestCount();
+      service.show(const _TestRoute('/home'));
+
+      expect(service.navigateBack(), isFalse);
+      expect(await lastRequest(), const _GuestRoute());
+      expect(await requestCount(), before);
+    });
+
+    test('a transient route is not kept in the history', () async {
+      showRoute(const _RouteA());
+      showRoute(const _TestCallbackRoute());
+
+      expect(service.navigateBack(), isTrue);
+      expect(await lastRequest(), const _RouteA());
+      service.show(const _RouteA());
+
+      final before = await requestCount();
+      expect(service.navigateBack(), isFalse);
+      expect(await requestCount(), before);
     });
   });
 
