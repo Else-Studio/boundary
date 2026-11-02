@@ -4,7 +4,7 @@ This file is for changing boundary itself. To build an app on boundary, read [do
 
 ## Toolchain
 
-- Flutter 3.47.8 (Dart 3.13.7) is pinned in the repository's root `mise.toml`. Run `flutter` and `dart` from inside `boundary/`, so mise picks that version.
+- Flutter 3.47.8 (Dart 3.13.7) is pinned in this repository's `mise.toml`. Run `flutter` and `dart` from the repository root, so mise picks that version. Keep the pin the same as in the apps built on boundary.
 - `flutter analyze` must print `No issues found!`. Infos count: the command exits non-zero on them. Do not add `// ignore:` or `// ignore_for_file:` in `lib/`.
 - `flutter test --reporter failures-only` runs the suite. The last line is `+N: All tests passed!`, with `~N` for skipped tests. `No tests match` or `No tests ran.` is never a pass.
 - Run one file with `flutter test --reporter failures-only test/<path>_test.dart`, and narrow it with `--plain-name "<part of a test name>"`.
@@ -76,6 +76,8 @@ A few behaviours are easy to break by accident:
 - No new dependency in `pubspec.yaml` unless the change was agreed to need one.
 - Nothing names the app boundary came from. `grep -rn "vh_web\|VH\|Keycloak\|keycloak\|Else Studio" . --include=*.md --include=*.dart --exclude=AGENTS.md` finds only the history line in `CHANGELOG.md`.
 
-## In the playrecord repository
+## Where boundary is planned
 
-Boundary is developed inside playrecord. There, planned work runs as slices. The decisions behind boundary are in `plans/boundary/rules.md`, and the slice workflow settings are in `slice-workflow.md` at the repository root.
+Boundary is its own repository. Apps use it as a path dependency on this checkout, so a change here reaches every app that uses it the next time that app runs `flutter pub get`.
+
+Planned work on boundary is still planned in the playrecord repository (`../elsetherapy/playrecord` from here) and runs as slices. The decisions behind boundary are in its `plans/boundary/rules.md`, and the slice workflow settings are in its `slice-workflow.md`. After a change here, run playrecord's app suite too, because the app is the first user of every change.
