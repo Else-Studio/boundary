@@ -76,8 +76,6 @@ A few behaviours are easy to break by accident:
 - No new dependency in `pubspec.yaml` unless the change was agreed to need one.
 - Nothing names the app boundary came from. `grep -rn "vh_web\|VH\|Keycloak\|keycloak\|Else Studio" . --include=*.md --include=*.dart --exclude=AGENTS.md` finds only the history line in `CHANGELOG.md`.
 
-## Where boundary is planned
+## Consumers
 
-Boundary is its own repository. Apps use it as a path dependency on this checkout, so a change here reaches every app that uses it the next time that app runs `flutter pub get`.
-
-Planned work on boundary is still planned in the playrecord repository (`../elsetherapy/playrecord` from here) and runs as slices. The decisions behind boundary are in its `plans/boundary/rules.md`, and the slice workflow settings are in its `slice-workflow.md`. After a change here, run playrecord's app suite too, because the app is the first user of every change.
+Apps use boundary as a path dependency on this checkout, so a change here reaches every app that uses it the next time that app runs `flutter pub get`. Run the consuming app's tests after a change to boundary.
